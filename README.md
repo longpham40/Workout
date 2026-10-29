@@ -49,6 +49,7 @@ To try Chat on your PC, run `npm install` once, set the key in the terminal (`$e
   - `data/workouts.js`: training types, levels and safety tips
   - `data/exercises.js`: every exercise's steps, safety tips and easier/harder versions
   - `data/programs.js`: the 12 programs. Each exercise line reads `rx('exercise-id', sets, 'reps', rest seconds, 'optional note')`.
+  - `data/body-areas.js`: the Upper body and Lower body workouts (gym, home and calisthenics at each level), written the same way.
   - `data/exercise-photos.js`: which photo in `images/exercises/` goes with each exercise. To add your own, save `name-0.jpg` (start) and `name-1.jpg` (finish) there and add a line.
   - `data/recipes.js`: recipes. Ingredients are `[amount, 'unit', 'item']` for one portion, so the app can scale them.
   - `data/meal-plans.js`: the sample days for each goal, plus nutrition tips.

@@ -24,6 +24,8 @@ const UI = (() => {
     play: '<path d="M8 5.5v13l10.5-6.5z"/>',
     chat: '<path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3.5 20.5l1.4-4.6A8.5 8.5 0 1 1 21 11.5z"/>',
     send: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    upper: '<circle cx="12" cy="4.5" r="2"/><path d="M8 9.5l-3-1L4 5M16 9.5l3-1L20 5M8 9.5h8l-1 5.5 .5 5h-7l.5-5z"/>',
+    lower: '<path d="M7 3h10l-1 18h-3l-1-11-1 11H8z"/><path d="M7.3 8h9.4"/>',
     trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20h7M10 17h4"/>',
   };
 

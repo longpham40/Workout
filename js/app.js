@@ -7,6 +7,7 @@ const App = (() => {
   const routes = {
     today: Screens.today,
     train: TrainScreens.train,
+    area: TrainScreens.area,
     ex: TrainScreens.exercise,
     library: TrainScreens.library,
     session: Session.session,

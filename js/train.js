@@ -6,6 +6,9 @@
 //   #/train/gym/beginner
 //   #/train/gym/beginner/1
 //   #/ex/goblet-squat[/gym/beginner/1/0]   (the extra part shows that day's sets and reps)
+//   #/area/upper                           upper or lower body workouts
+//   #/area/upper/gym/beginner
+//   #/ex/goblet-squat/area/upper/gym/beginner/0
 //   #/library
 const TrainScreens = (() => {
   const { icon, esc, sectionTitle } = UI;
@@ -13,6 +16,8 @@ const TrainScreens = (() => {
   const findType = id => TRAINING_TYPES.find(t => t.id === id);
   const findLevel = id => LEVELS.find(l => l.id === id);
   const programFor = (typeId, levelId) => PROGRAMS[typeId]?.[levelId];
+  const findArea = id => BODY_AREAS.find(a => a.id === id);
+  const areaWorkout = (areaId, typeId, levelId) => AREA_WORKOUTS[areaId]?.[typeId]?.[levelId];
 
   function formatRest(seconds) {
     if (!seconds) return '';
@@ -130,7 +135,18 @@ const TrainScreens = (() => {
       title: 'Train',
       html: `
         ${myProgramCard()}
-        <p class="lead muted">Pick a training style. Each one has a beginner, intermediate and advanced program.</p>
+        ${sectionTitle('By body area')}
+        ${BODY_AREAS.map(a => `
+          <a class="card link-card" href="#/area/${a.id}">
+            <span class="type-icon" style="--c: var(--accent)">${icon(a.icon)}</span>
+            <div>
+              <h3>${esc(a.name)}</h3>
+              <p class="muted small">${esc(a.blurb)} Gym, home or calisthenics, at every level.</p>
+            </div>
+            ${icon('chevron', 'chev')}
+          </a>`).join('')}
+        ${sectionTitle('Programs')}
+        <p class="lead muted pad-x">Pick a training style. Each one has a beginner, intermediate and advanced program.</p>
         ${TRAINING_TYPES.map(t => `
           <a class="card link-card" href="#/train/${t.id}">
             <span class="type-icon" style="--c: var(--${t.id})">${icon(t.icon)}</span>
@@ -251,24 +267,19 @@ const TrainScreens = (() => {
 
   // ---------- One training day ----------
 
-  function trainDay(type, level, dayNum) {
-    const day = programFor(type.id, level.id).days[dayNum - 1];
-    return {
-      title: day.name,
-      subtitle: `${type.name} · ${level.name} · Day ${dayNum}`,
-      tab: 'train',
-      back: { href: `#/train/${type.id}/${level.id}`, label: level.name },
-      html: `
-        <p class="muted pad-x">${esc(day.focus)}</p>
-        ${day.note ? `<section class="card note small">${esc(day.note)}</section>` : ''}
+  // Warm-up, exercise list, cool-down and Start button. exPath is each exercise's address, minus its index.
+  function workoutBody(typeId, workout, exPath, inProgress) {
+    return `
+        <p class="muted pad-x">${esc(workout.focus)}</p>
+        ${workout.note ? `<section class="card note small">${esc(workout.note)}</section>` : ''}
 
         ${sectionTitle('Warm-up · 5–10 min')}
-        <section class="card">${bulletList(WARMUPS[type.id])}</section>
+        <section class="card">${bulletList(WARMUPS[typeId])}</section>
 
         ${sectionTitle('Workout')}
         <div class="list">
-          ${day.main.map((item, i) => `
-            <a class="row-link" href="#/ex/${item.ex}/${type.id}/${level.id}/${dayNum}/${i}">
+          ${workout.main.map((item, i) => `
+            <a class="row-link" href="#/ex/${item.ex}/${exPath}/${i}">
               ${thumb(item.ex, i + 1)}
               <span class="row-main">
                 <strong>${esc(EXERCISES[item.ex].name)}</strong>
@@ -279,35 +290,109 @@ const TrainScreens = (() => {
         </div>
 
         ${sectionTitle('Cool-down · 5–10 min')}
-        <section class="card">${bulletList([...COOLDOWNS.common, ...COOLDOWNS[type.id]])}</section>
+        <section class="card">${bulletList([...COOLDOWNS.common, ...COOLDOWNS[typeId]])}</section>
 
-        <button class="btn primary" data-action="start">${isInProgress(type.id, level.id, dayNum) ? 'Carry on with this workout' : 'Start workout'}</button>
-        <p class="hint center">Tick off each set as you go. A rest timer starts after every set.</p>`,
+        <button class="btn primary" data-action="start">${inProgress ? 'Carry on with this workout' : 'Start workout'}</button>
+        <p class="hint center">Tick off each set as you go. A rest timer starts after every set.</p>`;
+  }
+
+  function trainDay(type, level, dayNum) {
+    const day = programFor(type.id, level.id).days[dayNum - 1];
+    return {
+      title: day.name,
+      subtitle: `${type.name} · ${level.name} · Day ${dayNum}`,
+      tab: 'train',
+      back: { href: `#/train/${type.id}/${level.id}`, label: level.name },
+      html: workoutBody(type.id, day, `${type.id}/${level.id}/${dayNum}`, isInProgress({ type: type.id, level: level.id, dayNum })),
       mount(page) {
         page.querySelector('[data-action="start"]').addEventListener('click', () => Session.startFromDay(type.id, level.id, dayNum));
       },
     };
   }
 
-  function isInProgress(typeId, levelId, dayNum) {
-    const src = Store.state.active?.source;
-    return src?.type === typeId && src?.level === levelId && src?.dayNum === dayNum;
+  const isInProgress = source => Session.sameSource(Store.state.active?.source, source);
+
+  // ---------- Upper and lower body ----------
+
+  function area(areaId, typeId, levelId) {
+    const a = findArea(areaId);
+    if (!a) return trainHome();
+    const type = findType(typeId);
+    const level = findLevel(levelId);
+    if (type && level && areaWorkout(a.id, type.id, level.id)) return areaDay(a, type, level);
+    return areaHome(a);
+  }
+
+  function areaHome(a) {
+    return {
+      title: a.name,
+      tab: 'train',
+      back: { href: '#/train', label: 'Train' },
+      html: `
+        <section class="card type-hero" style="--c: var(--accent)">
+          <span class="type-icon">${icon(a.icon)}</span>
+          <p>${esc(a.blurb)} Choose where you train and your level.</p>
+          <p class="muted small">${esc(a.plan)}</p>
+        </section>
+        ${AREA_TYPES.map(findType).map(type => `
+          ${sectionTitle(type.name)}
+          <div class="list">
+            ${LEVELS.map(level => {
+              const w = areaWorkout(a.id, type.id, level.id);
+              return `
+                <a class="row-link" href="#/area/${a.id}/${type.id}/${level.id}">
+                  <span class="type-icon row-icon" style="--c: var(--${type.id})">${icon(type.icon)}</span>
+                  <span class="row-main">
+                    <strong>${esc(level.name)}</strong>
+                    <span class="muted small block">${w.main.length} exercises · ${esc(w.duration)}</span>
+                  </span>
+                  ${isInProgress({ area: a.id, type: type.id, level: level.id }) ? '<span class="chip accent">In progress</span>' : ''}
+                  ${icon('chevron', 'chev')}
+                </a>`;
+            }).join('')}
+          </div>`).join('')}`,
+    };
+  }
+
+  function areaDay(a, type, level) {
+    const w = areaWorkout(a.id, type.id, level.id);
+    return {
+      title: a.name,
+      subtitle: `${type.name} · ${level.name} · ${w.duration}`,
+      tab: 'train',
+      back: { href: `#/area/${a.id}`, label: a.name },
+      html: workoutBody(type.id, w, `area/${a.id}/${type.id}/${level.id}`, isInProgress({ area: a.id, type: type.id, level: level.id })),
+      mount(page) {
+        page.querySelector('[data-action="start"]').addEventListener('click', () => Session.startFromArea(a.id, type.id, level.id));
+      },
+    };
   }
 
   // ---------- Exercise detail ----------
 
-  function exercise(id, typeId, levelId, dayNum, index) {
+  // Which workout an exercise page was opened from, so it can show that workout's sets and reps.
+  function workoutItem(params) {
+    if (params[0] === 'area') {
+      const [, areaId, typeId, levelId, index] = params;
+      const item = areaWorkout(areaId, typeId, levelId)?.main[Number(index)];
+      return item && { item, typeId, back: { href: `#/area/${areaId}/${typeId}/${levelId}`, label: findArea(areaId).name } };
+    }
+    const [typeId, levelId, dayNum, index] = params;
+    const day = programFor(typeId, levelId)?.days[Number(dayNum) - 1];
+    const item = day?.main[Number(index)];
+    return item && { item, typeId, back: { href: `#/train/${typeId}/${levelId}/${dayNum}`, label: day.name } };
+  }
+
+  function exercise(id, ...params) {
     const ex = EXERCISES[id];
     if (!ex) return library();
-    const item = programFor(typeId, levelId)?.days[Number(dayNum) - 1]?.main[Number(index)];
+    const { item, typeId, back } = workoutItem(params) || {};
     const fav = Store.isFavourite('exercises', id);
 
     return {
       title: ex.name,
       tab: 'train',
-      back: item
-        ? { href: `#/train/${typeId}/${levelId}/${dayNum}`, label: programFor(typeId, levelId).days[dayNum - 1].name }
-        : { href: '#/library', label: 'Exercises' },
+      back: back || { href: '#/library', label: 'Exercises' },
       html: `
         ${photoFrame(id)}
 
@@ -425,5 +510,5 @@ const TrainScreens = (() => {
 
   const typesFor = id => typesByExercise[id] || new Set();
 
-  return { train, exercise, library, nextWorkout, typesFor, doseLine, photoFrame, startPhotos, thumb };
+  return { train, area, exercise, library, nextWorkout, typesFor, doseLine, photoFrame, startPhotos, thumb };
 })();

@@ -126,22 +126,34 @@ const Session = (() => {
     return true;
   }
 
-  function startFromDay(typeId, levelId, dayNum) {
-    const a = Store.state.active;
-    const src = a?.source;
-    if (src && src.type === typeId && src.level === levelId && src.dayNum === dayNum) {
+  // Where a workout came from: { type, level, dayNum } for a program day, { area, type, level } for upper/lower.
+  const sameSource = (a, b) => !!a && !!b &&
+    a.type === b.type && a.level === b.level && a.dayNum === b.dayNum && a.area === b.area;
+
+  function startFrom(source, name, workout) {
+    if (sameSource(Store.state.active?.source, source)) {
       location.hash = '#/session';
       return;
     }
-    const day = PROGRAMS[typeId][levelId].days[dayNum - 1];
     const unit = currentUnit();
     const started = begin({
-      name: day.name,
-      source: { type: typeId, level: levelId, dayNum },
+      name,
+      source,
       unit,
-      items: day.main.map(rx => makeItem({ ex: rx.ex, name: EXERCISES[rx.ex].name, typeId, target: rx }, unit)),
+      items: workout.main.map(rx => makeItem({ ex: rx.ex, name: EXERCISES[rx.ex].name, typeId: source.type, target: rx }, unit)),
     });
     if (started) location.hash = '#/session';
+  }
+
+  function startFromDay(typeId, levelId, dayNum) {
+    const day = PROGRAMS[typeId][levelId].days[dayNum - 1];
+    startFrom({ type: typeId, level: levelId, dayNum }, day.name, day);
+  }
+
+  function startFromArea(areaId, typeId, levelId) {
+    const area = BODY_AREAS.find(a => a.id === areaId);
+    const type = TRAINING_TYPES.find(t => t.id === typeId);
+    startFrom({ area: areaId, type: typeId, level: levelId }, `${area.name} · ${type.name}`, AREA_WORKOUTS[areaId][typeId][levelId]);
   }
 
   function startFree() {
@@ -217,7 +229,7 @@ const Session = (() => {
       s.sessions.push(record);
       s.active = null;
       // Move "My program" on to the day after this one.
-      if (a.source && s.program?.type === a.source.type && s.program?.level === a.source.level) {
+      if (a.source?.dayNum && s.program?.type === a.source.type && s.program?.level === a.source.level) {
         s.program.next = a.source.dayNum;
       }
     });
@@ -658,5 +670,5 @@ const Session = (() => {
       </div>`;
   }
 
-  return { session, history, startFromDay, startFree, activeCard, recentList };
+  return { session, history, startFromDay, startFromArea, sameSource, startFree, activeCard, recentList };
 })();

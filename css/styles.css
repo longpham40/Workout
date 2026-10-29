@@ -896,3 +896,7 @@ body[data-route="chat"] .page { min-height: calc(100svh - var(--tabbar-h) - env(
 @media (prefers-reduced-motion: reduce) {
   .typing i { animation: none; opacity: 0.6; }
 }
+
+/* Small type icon at the start of a list row */
+.row-icon { width: 40px; height: 40px; border-radius: 12px; flex: none; }
+.row-icon .icon { width: 22px; height: 22px; }
