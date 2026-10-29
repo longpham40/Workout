@@ -2,7 +2,8 @@
 // It tries the network first (so your edits show up straight away)
 // and falls back to the saved copy when there's no signal.
 
-const CACHE = 'train-eat-v5';
+// Exercise photos aren't listed: each one is saved the first time you open its exercise.
+const CACHE = 'train-eat-v6';
 const APP_FILES = [
   './',
   './index.html',
@@ -10,6 +11,7 @@ const APP_FILES = [
   './css/styles.css',
   './data/workouts.js',
   './data/exercises.js',
+  './data/exercise-photos.js',
   './data/programs.js',
   './data/recipes.js',
   './data/meal-plans.js',

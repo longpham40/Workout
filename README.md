@@ -35,6 +35,7 @@ It then opens full screen like an app and works without signal.
   - `data/workouts.js`: training types, levels and safety tips
   - `data/exercises.js`: every exercise's steps, safety tips and easier/harder versions
   - `data/programs.js`: the 12 programs. Each exercise line reads `rx('exercise-id', sets, 'reps', rest seconds, 'optional note')`.
+  - `data/exercise-photos.js`: which photo in `images/exercises/` goes with each exercise. To add your own, save `name-0.jpg` (start) and `name-1.jpg` (finish) there and add a line.
   - `data/recipes.js`: recipes. Ingredients are `[amount, 'unit', 'item']` for one portion, so the app can scale them.
   - `data/meal-plans.js`: the sample days for each goal, plus nutrition tips.
 - **Look:** colours are at the top of `css/styles.css`.
@@ -68,3 +69,4 @@ Everything you save stays on the phone, in the browser's storage for this app. T
 | `js/app.js` | Switches screens based on the address |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Home Screen install and offline use |
 | `serve.js` | Small local web server for testing |
+| `images/exercises/` | Exercise photos from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain) |

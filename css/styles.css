@@ -310,6 +310,78 @@ main {
 }
 .fav-mark { width: 18px; height: 18px; color: var(--cardio); fill: currentColor; }
 
+/* ---------- Exercise photos ---------- */
+.ex-photo { margin: 0; display: grid; gap: 10px; }
+/* Fixed 3:2 frame. Photos are fitted inside (not cropped), so tall or wide ones still show the whole body. */
+.ex-photo-frame {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.ex-photo.compact .ex-photo-frame { border-radius: 12px; }
+.ex-photo-frame img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.ex-photo-frame img.on { opacity: 1; }
+.ex-photo figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.photo-toggle { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--surface-2); }
+.photo-toggle button {
+  min-height: 34px;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.photo-toggle button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+
+.thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+.thumb img { width: 100%; height: 100%; object-fit: cover; }
+.thumb .icon { width: 26px; height: 26px; }
+.thumb-num {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgb(0 0 0 / 0.65);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+.credit { margin-top: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-photo-frame img { transition: none; }
+}
+
 /* ---------- Library search ---------- */
 .search {
   -webkit-appearance: none;

@@ -293,6 +293,7 @@ const Session = (() => {
         </div>
 
         <section class="card stack">
+          ${item.ex ? TrainScreens.photoFrame(item.ex, { compact: true }) : ''}
           <div>
             <h2 class="ex-title">${esc(item.name)}</h2>
             ${item.target ? `<p class="muted">${esc(TrainScreens.doseLine(item.target))}</p>` : ''}
@@ -369,6 +370,7 @@ const Session = (() => {
   function mountSession(page) {
     const a = Store.state.active;
     keepAwake();
+    TrainScreens.startPhotos(page);
     // Pick the rest timer back up if the app was closed during a rest.
     if (a.rest?.endAt > Date.now() && !Timer.running) {
       Timer.start({ seconds: a.rest.total / 1000, until: a.rest.endAt, label: 'Rest' });
@@ -521,6 +523,7 @@ const Session = (() => {
               </div>` : ''}
             <div class="list">${list.map(([id, ex]) => `
               <button class="row-link as-button" data-add="${id}">
+                ${TrainScreens.thumb(id)}
                 <span class="row-main"><strong>${esc(ex.name)}</strong><span class="muted small block">${esc(ex.muscles)}</span></span>
                 ${Store.isFavourite('exercises', id) ? icon('heart', 'fav-mark') : ''}
               </button>`).join('')}</div>`;

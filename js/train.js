@@ -36,6 +36,67 @@ const TrainScreens = (() => {
 
   const bulletList = items => `<ul class="bullets">${items.map(i => `<li>${esc(i)}</li>`).join('')}</ul>`;
 
+  // ---------- Exercise photos ----------
+
+  const photoSrc = (p, frame) => `images/exercises/${p.name}-${frame}.jpg`;
+
+  // Start and finish photos stacked in one frame. They switch back and forth so you can see the movement.
+  function photoFrame(id, { compact = false } = {}) {
+    const p = EXERCISE_PHOTOS[id];
+    if (!p) return '';
+    const frames = p.frames || [0, 1];
+    const name = EXERCISES[id]?.name || '';
+    const imgs = frames.map((f, k) => `
+      <img src="${photoSrc(p, f)}" alt="${esc(name)}, ${f ? 'finish' : 'start'} position" width="850" height="567"
+        loading="lazy" decoding="async"${k === 0 ? ' class="on"' : ''}>`).join('');
+    const toggle = frames.length > 1
+      ? `<div class="photo-toggle" role="group" aria-label="Show position">
+           <button data-show="0" aria-pressed="true">Start</button>
+           <button data-show="1" aria-pressed="false">Finish</button>
+         </div>`
+      : '';
+    return `
+      <figure class="ex-photo${compact ? ' compact' : ''}"${frames.length > 1 ? ' data-cycle' : ''}>
+        <div class="ex-photo-frame">${imgs}</div>
+        ${toggle || p.note ? `<figcaption>${toggle}${p.note ? `<span class="muted small">${esc(p.note)}</span>` : ''}</figcaption>` : ''}
+      </figure>`;
+  }
+
+  // Wires up the photo frames on a page: switches every 1.6 s until you tap Start or Finish.
+  function startPhotos(page) {
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    for (const fig of page.querySelectorAll('.ex-photo[data-cycle]')) {
+      const imgs = fig.querySelectorAll('img');
+      const buttons = fig.querySelectorAll('[data-show]');
+      let shown = 0;
+      const show = i => {
+        shown = i;
+        imgs.forEach((img, k) => img.classList.toggle('on', k === i));
+        buttons.forEach((b, k) => b.setAttribute('aria-pressed', k === i));
+      };
+      const timer = reduceMotion ? null : setInterval(() => {
+        if (!fig.isConnected) clearInterval(timer); // the page was replaced
+        else show(1 - shown);
+      }, 1600);
+      fig.addEventListener('click', e => {
+        const b = e.target.closest('[data-show]');
+        if (!b) return;
+        clearInterval(timer);
+        show(Number(b.dataset.show));
+      });
+    }
+  }
+
+  // Small square picture for lists, or a plain icon when there's no photo.
+  function thumb(id, number) {
+    const p = EXERCISE_PHOTOS[id];
+    const badge = number ? `<span class="thumb-num">${number}</span>` : '';
+    const inner = p
+      ? `<img src="${photoSrc(p, (p.frames || [0, 1]).at(-1))}" alt="" width="56" height="56" loading="lazy" decoding="async">`
+      : icon('train');
+    return `<span class="thumb${p ? '' : ' empty'}">${inner}${badge}</span>`;
+  }
+
   // ---------- Train home ----------
 
   function train(typeId, levelId, dayNum) {
@@ -208,7 +269,7 @@ const TrainScreens = (() => {
         <div class="list">
           ${day.main.map((item, i) => `
             <a class="row-link" href="#/ex/${item.ex}/${type.id}/${level.id}/${dayNum}/${i}">
-              <span class="row-num">${i + 1}</span>
+              ${thumb(item.ex, i + 1)}
               <span class="row-main">
                 <strong>${esc(EXERCISES[item.ex].name)}</strong>
                 <span class="muted small block">${esc(doseLine(item))}</span>
@@ -248,6 +309,8 @@ const TrainScreens = (() => {
         ? { href: `#/train/${typeId}/${levelId}/${dayNum}`, label: programFor(typeId, levelId).days[dayNum - 1].name }
         : { href: '#/library', label: 'Exercises' },
       html: `
+        ${photoFrame(id)}
+
         <section class="card facts">
           <div><span class="label">Works</span><span>${esc(ex.muscles)}</span></div>
           <div><span class="label">Equipment</span><span>${esc(ex.equipment)}</span></div>
@@ -279,6 +342,7 @@ const TrainScreens = (() => {
           ${icon('heart', 'inline')} ${fav ? 'Saved to favourites' : 'Save to favourites'}
         </button>`,
       mount(page) {
+        startPhotos(page);
         page.querySelector('[data-action="fav"]').addEventListener('click', () => {
           const added = Store.toggleFavourite('exercises', id);
           App.refresh();
@@ -323,6 +387,7 @@ const TrainScreens = (() => {
             ? `<p class="muted small pad-x">${list.length} exercise${list.length === 1 ? '' : 's'}</p>
                <div class="list">${list.map(([id, ex]) => `
                  <a class="row-link" href="#/ex/${id}">
+                   ${thumb(id)}
                    <span class="row-main">
                      <strong>${esc(ex.name)}</strong>
                      <span class="muted small block">${esc(ex.muscles)}</span>
@@ -360,5 +425,5 @@ const TrainScreens = (() => {
 
   const typesFor = id => typesByExercise[id] || new Set();
 
-  return { train, exercise, library, nextWorkout, typesFor, doseLine };
+  return { train, exercise, library, nextWorkout, typesFor, doseLine, photoFrame, startPhotos, thumb };
 })();

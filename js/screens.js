@@ -174,6 +174,7 @@ const Screens = (() => {
         ${sectionTitle('About')}
         <section class="card">
           <p class="small muted">The training and nutrition guidance in this app is general information, not medical advice. Calories and protein are rough estimates. If you have an injury or a health condition, check with a doctor or physio before you start.</p>
+          <p class="small muted credit">Exercise photos: <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noopener">free-exercise-db</a>, released into the public domain. Thank you to its contributors.</p>
         </section>`,
       mount: mountSettings,
     };
