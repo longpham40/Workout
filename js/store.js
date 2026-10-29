@@ -21,6 +21,7 @@ const Store = (() => {
     active: null,    // the workout in progress
     sessions: [],    // finished workouts
     bodyWeights: [], // { date, kg }
+    chat: [],        // { role: 'user' | 'assistant', content } — your coach chat
     ui: {},          // small preferences, like hidden tips
     createdAt: new Date().toISOString(),
   });

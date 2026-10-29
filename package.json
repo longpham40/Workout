@@ -1,0 +1,11 @@
+{
+  "name": "train-and-eat",
+  "private": true,
+  "description": "Workout and meal-planning web app. The only dependency is for the coach chat server function in api/.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0"
+  }
+}

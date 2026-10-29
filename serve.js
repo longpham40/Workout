@@ -1,4 +1,5 @@
-// Tiny web server for testing on your PC and iPhone. No installs needed.
+// Tiny web server for testing on your PC and iPhone. No installs needed,
+// except for Chat (see below).
 //   Run:  node serve.js
 //   PC:   http://localhost:8080
 //   Phone (same Wi-Fi): use the "Phone" address it prints.
@@ -30,6 +31,15 @@ http.createServer((req, res) => {
     res.writeHead(400).end('Bad request');
     return;
   }
+  // Coach chat runs the same server function as on Vercel.
+  // It needs `npm install` once and ANTHROPIC_API_KEY set in this terminal.
+  if (urlPath === '/api/chat') {
+    import('./api/chat.mjs')
+      .then(chat => chat.default(req, res))
+      .catch(() => res.writeHead(501, { 'Content-Type': 'text/plain' }).end('Chat needs `npm install` first.'));
+    return;
+  }
+
   let file = path.join(ROOT, urlPath);
   if (file !== ROOT && !file.startsWith(ROOT + path.sep)) {
     res.writeHead(403).end('Forbidden');

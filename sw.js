@@ -3,7 +3,7 @@
 // and falls back to the saved copy when there's no signal.
 
 // Exercise photos aren't listed: each one is saved the first time you open its exercise.
-const CACHE = 'train-eat-v6';
+const CACHE = 'train-eat-v7';
 const APP_FILES = [
   './',
   './index.html',
@@ -24,6 +24,7 @@ const APP_FILES = [
   './js/eat.js',
   './js/charts.js',
   './js/progress.js',
+  './js/chat.js',
   './js/screens.js',
   './js/app.js',
   './icons/icon.svg',

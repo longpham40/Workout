@@ -18,6 +18,7 @@ const App = (() => {
     weights: ProgressScreens.weights,
     bests: ProgressScreens.bests,
     favourites: ProgressScreens.favourites,
+    chat: ChatScreens.chat,
     settings: Screens.settings,
   };
 

@@ -160,7 +160,7 @@ const Screens = (() => {
               ${Object.entries(Nutrition.ACTIVITY).map(([id, a]) => option(id, a.label, p.activity)).join('')}
             </select>
           </label>
-          <p class="hint">Used only to estimate your calorie and protein targets. It never leaves this phone.</p>
+          <p class="hint">Used to estimate your calorie and protein targets. It stays on this phone, except that the basics go with your questions when you use Chat.</p>
         </form>
 
         ${sectionTitle('Your data')}

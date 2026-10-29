@@ -29,6 +29,20 @@ Host the `workout-app` folder on a free https host such as GitHub Pages. Then, i
 
 It then opens full screen like an app and works without signal.
 
+## Chat (coach)
+
+The **Chat** tab lets you ask a coach about training and food. It answers questions only; it never changes your plan or data. Answers come from Claude through a small server function, `api/chat.mjs`, so Chat works on the **Vercel** address only, not on GitHub Pages.
+
+To switch it on:
+
+1. Get an API key at [platform.claude.com](https://platform.claude.com). Each question costs a small amount, so set a monthly spend limit there.
+2. In Vercel, open the project, then go to **Settings → Environment Variables**.
+3. Add `ANTHROPIC_API_KEY` with your key, then **redeploy** (Deployments → ⋯ → Redeploy).
+
+The key stays on Vercel's server and never reaches the phone. When someone chats, their question and profile basics (goal, targets, program) are sent along with it. The model and the coach's instructions are at the top of `api/chat.mjs`.
+
+To try Chat on your PC, run `npm install` once, set the key in the terminal (`$env:ANTHROPIC_API_KEY="..."` in PowerShell), then run `node serve.js`.
+
 ## Updating
 
 - **Text and content:** edit the files in `data/`:
@@ -64,9 +78,12 @@ Everything you save stays on the phone, in the browser's storage for this app. T
 | `js/timer.js` | Rest and hold countdown bar |
 | `js/eat.js` | Meal plan, swaps, recipe library and recipe pages |
 | `js/progress.js` | Weigh-ins, charts, personal bests, favourites |
+| `js/chat.js` | Chat screen: asks the coach and shows answers as they arrive |
+| `api/chat.mjs` | Server function for Chat (runs on Vercel, holds the API key) |
 | `js/charts.js` | Line and bar charts with tap-for-value tooltips |
 | `js/screens.js` | Today, Eat, Progress, Settings |
 | `js/app.js` | Switches screens based on the address |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Home Screen install and offline use |
 | `serve.js` | Small local web server for testing |
+| `package.json` | Lists the one package Chat needs; Vercel installs it |
 | `images/exercises/` | Exercise photos from [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (public domain) |
