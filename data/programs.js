@@ -530,7 +530,7 @@ const PROGRAMS = {
       duration: '40–55 min',
       schedule: 'Push, Pull, rest, Legs, Skills, rest, rest.',
       effort: 'Strength moves: stop 1–2 reps short of failure. Skills: practise fresh and stop when form slips. They aren’t meant to tire you out.',
-      progression: 'Reach the top of the rep range on all sets, then move to a harder version or add a loaded backpack.',
+      progression: 'Reach the top of the rep range on all sets, then move to a harder version: a slower lowering, a pause, or the next progression.',
       deload: 'Every 6th week, halve your sets and just practise skills.',
       days: [
         {
@@ -581,29 +581,29 @@ const PROGRAMS = {
     },
 
     advanced: {
-      summary: 'Five days of serious bodyweight strength: weighted basics, one-arm progressions, handstands and L-sits.',
+      summary: 'Five days of serious bodyweight strength: explosive and tempo basics, one-arm progressions, handstands and L-sits.',
       duration: '50–70 min',
       schedule: 'Push, Pull, Legs, rest, Skills, Full-body endurance, rest.',
       effort: 'Strength sets: about 8–9 out of 10. Skills: quality only. End each set before your form breaks down.',
-      progression: 'Add load with a backpack or dip belt in 2.5 kg (5 lb) steps, or move to a harder version. Track your best hold times on skill days.',
-      deload: 'Every 5th week, halve your sets, drop added weight, and keep skill practice light.',
+      progression: 'Bodyweight only. Once you hit the top of a rep range, make it harder: lower for 4 seconds, pause at the hardest point, or move to the next progression (archer, explosive or one-arm). Track your best hold times on skill days.',
+      deload: 'Every 5th week, halve your sets, go back to easier versions, and keep skill practice light.',
       days: [
         {
           name: 'Push',
-          focus: 'One-arm push strength and weighted dips',
+          focus: 'One-arm push strength and slow, deep dips',
           main: [
             rx('archer-push-up', 4, '5–8 each side', 120),
-            rx('dip', 4, '8–12', 120, 'Add weight once you can do 4 × 12.'),
+            rx('dip', 4, '8–12', 120, 'Once you can do 4 × 12, lower for 4 seconds and pause at the bottom.'),
             rx('pike-push-up', 4, '8–12', 120, 'Feet on a box or chair.'),
             rx('hollow-hold', 3, '45 s', 45),
           ],
         },
         {
           name: 'Pull',
-          focus: 'Power and weighted pulling',
+          focus: 'Power and strict, slow pulling',
           main: [
             rx('explosive-pull-up', 5, '3–5', 180),
-            rx('pull-up', 4, '8–12', 120, 'Add weight once you can do 4 × 12.'),
+            rx('pull-up', 4, '8–12', 120, 'Once you can do 4 × 12, pause for 2 seconds with your chin over the bar.'),
             rx('inverted-row', 3, '12–15', 75, 'Feet up on a bench.'),
             rx('hanging-knee-raise', 3, '10–15', 60, 'Straight legs if you can.'),
           ],

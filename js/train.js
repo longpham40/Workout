@@ -388,6 +388,10 @@ const TrainScreens = (() => {
     if (!ex) return library();
     const { item, typeId, back } = workoutItem(params) || {};
     const fav = Store.isFavourite('exercises', id);
+    // Calisthenics is bodyweight only, so show the no-weights version of the tips.
+    const bw = typeId === 'calisthenics' ? ex.bodyweight || {} : {};
+    const equipment = bw.equipment || ex.equipment;
+    const harder = bw.harder || ex.harder;
 
     return {
       title: ex.name,
@@ -398,7 +402,7 @@ const TrainScreens = (() => {
 
         <section class="card facts">
           <div><span class="label">Works</span><span>${esc(ex.muscles)}</span></div>
-          <div><span class="label">Equipment</span><span>${esc(ex.equipment)}</span></div>
+          <div><span class="label">Equipment</span><span>${esc(equipment)}</span></div>
         </section>
 
         ${item ? `
@@ -420,7 +424,7 @@ const TrainScreens = (() => {
         ${sectionTitle('Adjust it')}
         <section class="card coach">
           <div><h3>Too hard?</h3><p class="small">${esc(ex.easier)}</p></div>
-          <div><h3>Too easy?</h3><p class="small">${esc(ex.harder)}</p></div>
+          <div><h3>Too easy?</h3><p class="small">${esc(harder)}</p></div>
         </section>
 
         <button class="btn fav" data-action="fav" aria-pressed="${fav}">

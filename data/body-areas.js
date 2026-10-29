@@ -1,5 +1,6 @@
 // Upper body and lower body workouts: one workout per area, training style and level.
 // They stand on their own, so you can train by body area instead of (or as well as) a program.
+// Calisthenics workouts are bodyweight only: no added weight.
 //
 // Each exercise line uses rx(exercise id, sets, reps or time, rest in seconds, optional note),
 // the same as data/programs.js. Exercise ids match the names in data/exercises.js.
@@ -130,11 +131,11 @@ const AREA_WORKOUTS = {
         ],
       },
       advanced: {
-        focus: 'Power pulling, weighted dips and skill holds for shoulders and core.',
+        focus: 'Power pulling, slow deep dips and skill holds for shoulders and core. All bodyweight.',
         duration: '55–60 min',
         main: [
           rx('explosive-pull-up', 4, '3–5', 150, 'Pull fast so your chest reaches the bar. Stop when reps slow down.'),
-          rx('dip', 4, '8–12', 120, 'Add weight with a belt or backpack once 4 × 12 is easy.'),
+          rx('dip', 4, '8–12', 120, 'Once 4 × 12 is easy, lower for 4 seconds and pause at the bottom.'),
           rx('archer-push-up', 4, '6 each side', 90),
           rx('inverted-row', 3, '12–15', 90, 'Feet up on a box to make it harder.'),
           rx('wall-handstand-hold', 4, '30–45 s', 90),

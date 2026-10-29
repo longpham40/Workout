@@ -542,7 +542,7 @@ const Session = (() => {
         };
         const add = (ex, name) => {
           Store.update(s => {
-            s.active.items.push(makeItem({ ex, name }, s.active.unit));
+            s.active.items.push(makeItem({ ex, name, typeId: s.active.source?.type }, s.active.unit));
             s.active.current = s.active.items.length - 1;
           });
           pickerQuery = '';

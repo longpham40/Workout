@@ -98,6 +98,7 @@ const EXERCISES = {
     ],
     easier: 'Split squat with both feet on the floor.',
     harder: 'Hold dumbbells or a loaded backpack, or take 3 seconds to lower.',
+    bodyweight: { harder: 'Take 3–4 seconds to lower, pause at the bottom, or add a jump at the top.', equipment: 'Bench or sturdy chair' }, // shown in calisthenics workouts
   },
   'hip-thrust': {
     name: 'Hip thrust',
@@ -188,6 +189,7 @@ const EXERCISES = {
     ],
     easier: 'Both feet on a flat floor.',
     harder: 'One leg at a time, holding a dumbbell.',
+    bodyweight: { harder: 'One leg at a time, with a 2-second pause at the top and the bottom.', equipment: 'A step' }, // shown in calisthenics workouts
   },
   'bodyweight-squat': {
     name: 'Bodyweight squat',
@@ -205,6 +207,7 @@ const EXERCISES = {
     ],
     easier: 'Sit down onto a chair and stand back up.',
     harder: 'Pause for 3 seconds at the bottom, or hold a loaded backpack.',
+    bodyweight: { harder: 'Pause for 3 seconds at the bottom, take 4 seconds to lower, or move on to split squats.' }, // shown in calisthenics workouts
   },
   'reverse-lunge': {
     name: 'Reverse lunge',
@@ -222,6 +225,7 @@ const EXERCISES = {
     ],
     easier: 'A smaller step, holding onto a support.',
     harder: 'Hold a loaded backpack, or move on to Bulgarian split squats.',
+    bodyweight: { harder: 'Take 3 seconds to lower and pause at the bottom, or move on to Bulgarian split squats.' }, // shown in calisthenics workouts
   },
   'glute-bridge': {
     name: 'Glute bridge',
@@ -273,6 +277,7 @@ const EXERCISES = {
     ],
     easier: 'A lower step.',
     harder: 'A higher step, or hold a loaded backpack.',
+    bodyweight: { harder: 'A higher step, a slow 3-second lowering, or drive up into a jump.' }, // shown in calisthenics workouts
   },
   'wall-sit': {
     name: 'Wall sit',
@@ -306,6 +311,7 @@ const EXERCISES = {
     ],
     easier: 'Kickstand version: keep the toes of your back foot lightly on the floor.',
     harder: 'Hold a dumbbell or backpack in the opposite hand.',
+    bodyweight: { harder: 'Take 3 seconds to lower, reach your arms out in front, and pause at the bottom.', equipment: 'None' }, // shown in calisthenics workouts
   },
   'assisted-pistol-squat': {
     name: 'Assisted pistol squat',
@@ -576,6 +582,7 @@ const EXERCISES = {
     ],
     easier: 'Bench dips with your feet on the floor, or band-assisted dips.',
     harder: 'Add weight with a dip belt or loaded backpack.',
+    bodyweight: { harder: 'Take 4 seconds to lower and pause at the bottom, or try ring dips.' }, // shown in calisthenics workouts
   },
 
   // ---------- Back ----------
@@ -728,6 +735,7 @@ const EXERCISES = {
     ],
     easier: 'Negative pull-ups, band-assisted pull-ups, or lat pulldowns.',
     harder: 'Add weight with a belt or backpack, or pause at the top.',
+    bodyweight: { harder: 'Pause for 2 seconds at the top and lower for 4 seconds, or move on to explosive or archer pull-ups.' }, // shown in calisthenics workouts
   },
   'negative-pull-up': {
     name: 'Negative pull-up',
@@ -842,6 +850,7 @@ const EXERCISES = {
     ],
     easier: 'Move your legs only.',
     harder: 'Hold a light weight in your hands.',
+    bodyweight: { harder: 'Move slower, and hold each reach for 3 seconds with your lower back pressed down.' }, // shown in calisthenics workouts
   },
   'bird-dog': {
     name: 'Bird dog',
