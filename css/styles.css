@@ -914,3 +914,44 @@ body[data-route="chat"] .page { min-height: calc(100svh - var(--tabbar-h) - env(
 .session-tools { display: flex; gap: 8px; }
 .session-tools .btn { flex: 1; gap: 6px; }
 .ex-dot.skipped::after { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+
+/* ---------- Calendar ---------- */
+.calendar .card-head { display: flex; align-items: center; justify-content: space-between; }
+.calendar .icon-btn { width: 40px; height: 40px; border-radius: 50%; }
+.calendar .icon-btn .icon { width: 20px; height: 20px; }
+.calendar .icon-btn:disabled { opacity: 0.3; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; text-align: center; }
+.cal-head { font-size: 12px; font-weight: 700; color: var(--muted); padding-bottom: 2px; }
+.cal-day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  max-height: 44px;
+  border-radius: 50%;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  text-decoration: none;
+}
+.cal-day.today { box-shadow: inset 0 0 0 2px var(--accent); color: var(--text); font-weight: 700; }
+.cal-day.trained { background: var(--accent); color: var(--accent-text); font-weight: 700; }
+.cal-day small { position: absolute; top: -2px; right: -2px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 11px; line-height: 16px; }
+
+/* ---------- Personal best celebration ---------- */
+.bests.celebrate { animation: pop 0.5s ease-out; }
+@keyframes pop { 0% { transform: scale(0.94); } 60% { transform: scale(1.03); } 100% { transform: scale(1); } }
+.confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 30; }
+.confetti i {
+  position: absolute;
+  top: -12px;
+  left: var(--x);
+  width: 8px;
+  height: 14px;
+  border-radius: 2px;
+  animation: confetti-fall 2s var(--d) ease-in forwards;
+}
+@keyframes confetti-fall { to { transform: translateY(105vh) rotate(var(--r)); opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) {
+  .bests.celebrate { animation: none; }
+}

@@ -136,6 +136,10 @@ const ProgressScreens = (() => {
 
   // ---------- Strength and personal bests ----------
 
+  // Estimated one-rep max (Epley formula). Only sets of 1–12 reps give a fair estimate.
+  const e1rm = (s, unit) => (s.reps >= 1 && s.reps <= 12 && s.weight ? toKg(s.weight, unit) * (s.reps === 1 ? 1 : 1 + s.reps / 30) : 0);
+  const E1RM = { name: 'Estimated one-rep max', value: e1rm, isWeight: true };
+
   const MEASURES = {
     weight: { name: 'Heaviest set', value: (s, unit) => (s.reps ? toKg(s.weight || 0, unit) : 0), isWeight: true },
     carry: { name: 'Heaviest carry', value: (s, unit) => toKg(s.weight || 0, unit), isWeight: true },
@@ -156,35 +160,134 @@ const ProgressScreens = (() => {
         const best = Math.max(...item.sets.map(s => m.value(s, session.unit)));
         if (!best) continue;
         const key = keyFor(item);
-        if (!map.has(key)) map.set(key, { key, name: item.name, measure: m, points: [] });
+        if (!map.has(key)) map.set(key, { key, name: item.name, measure: m, points: [], e1rm: [] });
         map.get(key).points.push({ date: session.date, value: best });
+        if (item.kind === 'weight') {
+          const est = Math.max(...item.sets.map(s => e1rm(s, session.unit)));
+          if (est) map.get(key).e1rm.push({ date: session.date, value: est });
+        }
       }
     }
     return [...map.values()];
   }
 
-  function strengthCard() {
+  // The chosen exercise, and whether to chart its heaviest set or estimated 1RM.
+  function chosenHistory() {
     const histories = exerciseHistories();
-    if (!histories.length) return '';
+    if (!histories.length) return null;
     const chosenKey = Store.state.ui.progressExercise;
     // Default to the exercise you've logged most often.
-    const chosen = histories.find(h => h.key === chosenKey) ||
+    const h = histories.find(x => x.key === chosenKey) ||
       [...histories].sort((a, b) => b.points.length - a.points.length)[0];
+    const useE1rm = Store.state.ui.progressMeasure === 'e1rm' && h.e1rm.length > 0;
+    return { histories, h, measure: useE1rm ? E1RM : h.measure, points: useE1rm ? h.e1rm : h.points, useE1rm };
+  }
+
+  function strengthCard() {
+    const c = chosenHistory();
+    if (!c) return '';
+    const { histories, h, measure, points, useE1rm } = c;
+    const best = Math.max(...points.map(p => p.value));
     return `
       <section class="card stack">
         <h3>Strength progress</h3>
         <label class="field">
           <span class="label">Exercise</span>
           <select data-select="exercise">
-            ${[...histories].sort((a, b) => a.name.localeCompare(b.name)).map(h =>
-              `<option value="${esc(h.key)}"${h.key === chosen.key ? ' selected' : ''}>${esc(h.name)}</option>`).join('')}
+            ${[...histories].sort((a, b) => a.name.localeCompare(b.name)).map(x =>
+              `<option value="${esc(x.key)}"${x.key === h.key ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}
           </select>
         </label>
-        <p class="muted small">${esc(chosen.measure.name)} each workout</p>
-        ${chosen.points.length > 1
+        ${h.e1rm.length ? `
+          <div class="segmented" role="group" aria-label="What to chart">
+            <label><input type="radio" name="measure" value="best"${useE1rm ? '' : ' checked'}><span>Heaviest set</span></label>
+            <label><input type="radio" name="measure" value="e1rm"${useE1rm ? ' checked' : ''}><span>Estimated 1RM</span></label>
+          </div>` : ''}
+        <div class="headline">
+          <span class="big">${esc(showMeasure(measure, best).replace(/ (kg|lb|reps|s)$/, ''))}<small>${esc(showMeasure(measure, best).match(/ (kg|lb|reps|s)$/)?.[1] || '')}</small></span>
+          <span class="muted small">Best ${esc(measure.name.toLowerCase())}</span>
+        </div>
+        ${useE1rm ? '<p class="muted small">Worked out from your best set of 1–12 reps each workout. A guide, not a target to test.</p>' : ''}
+        ${points.length > 1
           ? `<div class="chart-box" data-chart="strength"></div>
-             ${Charts.table(['Date', chosen.measure.name], [...chosen.points].reverse().map(p => [longDate(p.date), showMeasure(chosen.measure, p.value)]))}`
-          : `<p class="muted small">Logged once so far: ${esc(showMeasure(chosen.measure, chosen.points[0].value))}. Do it again to see a trend.</p>`}
+             ${Charts.table(['Date', measure.name], [...points].reverse().map(p => [longDate(p.date), showMeasure(measure, p.value)]))}`
+          : `<p class="muted small">Logged once so far. Do it again to see a trend.</p>`}
+      </section>`;
+  }
+
+  // ---------- Weekly volume ----------
+
+  // Weight × reps for every weighted set, per week, in your units.
+  function weeklyVolume(weeks = 8) {
+    const counts = weeklyCounts(weeks);
+    const totals = Object.fromEntries(counts.map(w => [w.week, 0]));
+    for (const s of Store.state.sessions) {
+      const week = mondayOf(parseDate(s.date));
+      if (!(week in totals)) continue;
+      for (const item of s.items) {
+        if (item.kind !== 'weight') continue;
+        for (const set of item.sets) totals[week] += showWeight(toKg(set.weight || 0, s.unit)) * (set.reps || 0);
+      }
+    }
+    return counts.map(w => ({ week: w.week, volume: Math.round(totals[w.week]) }));
+  }
+
+  function volumeCard(vol) {
+    if (!vol.some(w => w.volume)) return '';
+    const unit = weightUnit();
+    const thisWeek = vol.at(-1).volume;
+    return `
+      <section class="card stack">
+        <h3>Weekly volume</h3>
+        <div class="headline">
+          <span class="big">${thisWeek.toLocaleString()}<small>${unit}</small></span>
+          <span class="muted small">Lifted this week (weight × reps)</span>
+        </div>
+        <div class="chart-box" data-chart="volume"></div>
+        ${Charts.table(['Week starting', `Volume (${unit})`], [...vol].reverse().map(w => [shortDate(w.week), w.volume.toLocaleString()]))}
+      </section>`;
+  }
+
+  // ---------- Calendar ----------
+
+  let calendarMonth = null; // first day of the month shown, 'YYYY-MM-01'
+
+  function calendarCard() {
+    const today = UI.isoDate();
+    calendarMonth ||= `${today.slice(0, 7)}-01`;
+    const first = parseDate(calendarMonth);
+    const year = first.getFullYear();
+    const month = first.getMonth();
+    const daysIn = new Date(year, month + 1, 0).getDate();
+    const lead = (first.getDay() + 6) % 7; // Monday first
+    const byDate = {};
+    for (const s of Store.state.sessions) (byDate[s.date] ||= []).push(s);
+    const monthName = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const trained = Object.keys(byDate).filter(d => d.startsWith(calendarMonth.slice(0, 7))).length;
+    const weekdays = Array.from({ length: 7 }, (_, i) => new Date(2024, 0, 1 + i).toLocaleDateString(undefined, { weekday: 'narrow' }));
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push('<span></span>');
+    for (let day = 1; day <= daysIn; day++) {
+      const iso = UI.isoDate(new Date(year, month, day));
+      const list = byDate[iso];
+      const label = `${parseDate(iso).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}${list ? `: ${list.map(s => s.name).join(', ')}` : ''}`;
+      cells.push(list
+        ? `<a class="cal-day trained${iso === today ? ' today' : ''}" href="#/history/${list[0].id}" aria-label="${esc(label)}">${day}${list.length > 1 ? `<small>${list.length}</small>` : ''}</a>`
+        : `<span class="cal-day${iso === today ? ' today' : ''}" aria-label="${esc(label)}">${day}</span>`);
+    }
+    const thisMonth = calendarMonth === `${today.slice(0, 7)}-01`;
+    return `
+      <section class="card stack calendar">
+        <div class="card-head">
+          <button class="icon-btn" data-cal="-1" aria-label="Previous month">${icon('back')}</button>
+          <h3>${esc(monthName)}</h3>
+          <button class="icon-btn" data-cal="1" aria-label="Next month"${thisMonth ? ' disabled' : ''}>${icon('chevron')}</button>
+        </div>
+        <div class="cal-grid" role="list">
+          ${weekdays.map(w => `<span class="cal-head" aria-hidden="true">${esc(w)}</span>`).join('')}
+          ${cells.join('')}
+        </div>
+        <p class="muted small">${trained ? `Trained on ${trained} day${trained === 1 ? '' : 's'} this month. Tap a day to see the workout.` : 'No workouts this month yet.'}</p>
       </section>`;
   }
 
@@ -202,6 +305,7 @@ const ProgressScreens = (() => {
   function progress() {
     const s = Store.state;
     const weeks = weeklyCounts();
+    const vol = weeklyVolume();
     const favs = s.favourites.exercises.length + s.favourites.recipes.length;
     const bests = recentBests(3);
     const needsBackup = s.sessions.length >= 3 &&
@@ -222,6 +326,8 @@ const ProgressScreens = (() => {
             ${icon('chevron', 'chev')}
           </a>` : ''}
 
+        ${s.sessions.length ? calendarCard() : ''}
+
         ${weightCard()}
 
         ${s.sessions.length ? `
@@ -232,6 +338,8 @@ const ProgressScreens = (() => {
           </section>` : ''}
 
         ${strengthCard()}
+
+        ${volumeCard(vol)}
 
         ${bests.length ? `
           ${sectionTitle('Personal bests')}
@@ -274,21 +382,38 @@ const ProgressScreens = (() => {
         }
         const strengthBox = page.querySelector('[data-chart="strength"]');
         if (strengthBox) {
-          const h = exerciseHistories();
-          const key = page.querySelector('[data-select="exercise"]').value;
-          const chosen = h.find(x => x.key === key);
+          const { h, measure, points } = chosenHistory();
           Charts.line(strengthBox, {
-            label: `${chosen.name}, ${chosen.measure.name.toLowerCase()}`,
-            points: chosen.points.map(p => ({
+            label: `${h.name}, ${measure.name.toLowerCase()}`,
+            points: points.map(p => ({
               date: p.date,
-              value: chosen.measure.isWeight ? showWeight(p.value) : p.value,
-              tip: `${shortDate(p.date)}: ${showMeasure(chosen.measure, p.value)}`,
+              value: measure.isWeight ? showWeight(p.value) : p.value,
+              tip: `${shortDate(p.date)}: ${showMeasure(measure, p.value)}`,
             })),
-            format: v => (chosen.measure.isWeight ? `${fmt(v)} ${weightUnit()}` : `${fmt(v)}${chosen.measure.suffix}`),
+            format: v => (measure.isWeight ? `${fmt(v)} ${weightUnit()}` : `${fmt(v)}${measure.suffix}`),
+          });
+        }
+        const volumeBox = page.querySelector('[data-chart="volume"]');
+        if (volumeBox) {
+          Charts.bars(volumeBox, {
+            label: `Weekly volume in ${weightUnit()}`,
+            bars: vol.map(w => ({ label: shortDate(w.week), value: w.volume, tip: `Week of ${shortDate(w.week)}: ${w.volume.toLocaleString()} ${weightUnit()}` })),
           });
         }
         page.querySelector('[data-select="exercise"]')?.addEventListener('change', e => {
           Store.update(s => { s.ui.progressExercise = e.target.value; });
+          App.refresh();
+        });
+        page.querySelectorAll('input[name="measure"]').forEach(r => r.addEventListener('change', e => {
+          Store.update(s => { s.ui.progressMeasure = e.target.value; });
+          App.refresh();
+        }));
+        page.querySelector('.calendar')?.addEventListener('click', e => {
+          const b = e.target.closest('[data-cal]');
+          if (!b) return;
+          const d = parseDate(calendarMonth);
+          d.setMonth(d.getMonth() + Number(b.dataset.cal));
+          calendarMonth = UI.isoDate(d);
           App.refresh();
         });
       },
@@ -388,5 +513,5 @@ const ProgressScreens = (() => {
     };
   }
 
-  return { progress, weights, bests, favourites };
+  return { progress, weights, bests, favourites, recentBests, weekStreak };
 })();

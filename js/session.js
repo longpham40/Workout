@@ -700,8 +700,8 @@ const Session = (() => {
             <p class="muted small">Great work. It’s saved on this phone.</p>
           </section>` : ''}
         ${record.bests?.length ? `
-          <section class="card bests">
-            <h3>${icon('trophy', 'inline')} New personal best${record.bests.length > 1 ? 's' : ''}</h3>
+          <section class="card bests${isNew ? ' celebrate' : ''}">
+            <h3>${icon('trophy', 'inline')} New personal best${record.bests.length > 1 ? 's' : ''}${isNew ? '!' : ''}</h3>
             <ul>${record.bests.map(b => `<li>${esc(b.name)}: <strong>${esc(b.label)}</strong></li>`).join('')}</ul>
           </section>` : ''}
         <section class="stats">
@@ -720,6 +720,7 @@ const Session = (() => {
         ${isNew ? '<a class="btn primary" href="#/today">Done</a>' : ''}
         <button class="btn danger" data-action="delete">Delete this workout</button>`,
       mount(page) {
+        if (isNew && record.bests?.length) celebrate(page);
         page.querySelector('[data-action="delete"]').addEventListener('click', () => {
           if (!confirm('Delete this workout from your history?')) return;
           Store.update(s => { s.sessions = s.sessions.filter(x => x.id !== id); });
@@ -728,6 +729,20 @@ const Session = (() => {
         });
       },
     };
+  }
+
+  // Confetti and a buzz when you set a personal best. Skipped if you've asked for less motion.
+  function celebrate(page) {
+    navigator.vibrate?.([40, 60, 120]);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const colours = ['var(--accent)', 'var(--gym)', 'var(--home)', 'var(--cardio)', 'var(--calisthenics)', '#e0a800'];
+    const burst = document.createElement('div');
+    burst.className = 'confetti';
+    burst.setAttribute('aria-hidden', 'true');
+    burst.innerHTML = Array.from({ length: 36 }, (_, i) =>
+      `<i style="--x: ${Math.round(Math.random() * 100)}%; --d: ${Math.round(Math.random() * 500)}ms; --r: ${Math.round(Math.random() * 720 - 360)}deg; background: ${colours[i % colours.length]}"></i>`).join('');
+    page.append(burst);
+    setTimeout(() => burst.remove(), 2600);
   }
 
   // ---------- Pieces for other screens ----------
