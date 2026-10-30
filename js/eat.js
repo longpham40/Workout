@@ -57,6 +57,37 @@ const EatScreens = (() => {
     };
   }
 
+  // ---------- What you've eaten today ----------
+
+  const KEEP_DAYS = 60;
+  const eatenOn = date => (Store.state.mealLog || {})[date] || [];
+  const eatenToday = () => eatenOn(UI.isoDate());
+  const totals = list => list.reduce((t, e) => ({ kcal: t.kcal + e.kcal, protein: t.protein + e.protein }), { kcal: 0, protein: 0 });
+
+  // Adds the entry, or removes it if it's already logged today.
+  function toggleEaten(entry) {
+    const today = UI.isoDate();
+    let added = false;
+    Store.update(s => {
+      s.mealLog ||= {};
+      const list = (s.mealLog[today] ||= []);
+      const i = list.findIndex(e => e.key === entry.key);
+      if (i >= 0) list.splice(i, 1);
+      else { list.push(entry); added = true; }
+      if (!list.length) delete s.mealLog[today];
+      // Only keep the last couple of months.
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - KEEP_DAYS);
+      for (const d of Object.keys(s.mealLog)) if (d < UI.isoDate(cutoff)) delete s.mealLog[d];
+    });
+    return added;
+  }
+
+  const planEntry = (goal, day, s, factor) => {
+    const r = RECIPES[s.id];
+    return { key: `plan:${goal}:${day}:${s.slot}:${s.id}`, name: r.name, kcal: Math.round(r.kcal * factor), protein: Math.round(r.protein * factor) };
+  };
+
   // ---------- Meal plan screen ----------
 
   function meter(label, value, target, unit) {
@@ -68,16 +99,18 @@ const EatScreens = (() => {
       </div>`;
   }
 
-  function mealRow(s, factor) {
+  function mealRow(s, factor, entry) {
     const r = RECIPES[s.id];
+    const eaten = eatenToday().some(e => e.key === entry.key);
     return `
-      <div class="meal-row">
+      <div class="meal-row${eaten ? ' eaten' : ''}">
         <a class="meal-main" href="#/recipe/${s.id}/${factor}">
           <span class="eyebrow">${esc(s.label)}${s.swapped ? ' · swapped' : ''}</span>
           <strong class="block">${esc(r.name)}</strong>
           <span class="muted small block">${Math.round(r.kcal * factor)} kcal · ${Math.round(r.protein * factor)} g protein · ${r.minutes} min</span>
         </a>
         <a class="btn small-btn quiet swap-btn" href="#/eat/swap/${s.slot}" aria-label="Swap ${esc(r.name)}">${icon('swap', 'inline')}Swap</a>
+        <button class="check" data-eat="${s.slot}" aria-pressed="${eaten}" aria-label="${esc(r.name)} eaten">${icon('check')}</button>
       </div>`;
   }
 
@@ -87,6 +120,11 @@ const EatScreens = (() => {
     const day = dayIndex();
     const plan = planFor(goalId, day);
     const t = plan.target;
+    const entries = plan.slots.map(s => planEntry(goalId, day, s, plan.factor));
+    const eaten = eatenToday();
+    const ate = totals(eaten);
+    const planKeys = new Set(entries.map(e => e.key));
+    const others = eaten.filter(e => !planKeys.has(e.key));
 
     return {
       title: 'Eat',
@@ -98,8 +136,10 @@ const EatScreens = (() => {
               ${Array.from({ length: DAYS }, (_, i) => `<button class="filter" data-day="${i}" aria-pressed="${i === day}">Day ${i + 1}</button>`).join('')}
             </div>
           </div>
-          ${meter('Calories', plan.kcal, t.kcal, 'kcal')}
-          ${meter('Protein', plan.protein, t.protein, 'g')}
+          <p class="eyebrow">Eaten today</p>
+          ${meter('Calories', ate.kcal, t.kcal, 'kcal')}
+          ${meter('Protein', ate.protein, t.protein, 'g')}
+          <p class="hint">Tick meals as you eat them. This day’s plan adds up to ${plan.kcal.toLocaleString()} kcal and ${plan.protein} g protein.</p>
           <p class="hint">${t.example
             ? 'Using an example target. <a href="#/settings">Add your details</a> to get your own.'
             : plan.factor === 1
@@ -107,7 +147,24 @@ const EatScreens = (() => {
               : `Each meal is ${portionText(plan.factor)} to fit your target. Recipes open already scaled.`}</p>
         </section>
 
-        <div class="list">${plan.slots.map(s => mealRow(s, plan.factor)).join('')}</div>
+        <div class="list">${plan.slots.map((s, i) => mealRow(s, plan.factor, entries[i])).join('')}</div>
+
+        <section class="card stack">
+          <h3>Ate something else?</h3>
+          ${others.length ? `
+            <ul class="other-food">${others.map(e => `
+              <li><span>${esc(e.name)} <span class="muted small">· ${e.kcal} kcal · ${e.protein} g protein</span></span>
+                <button class="btn small-btn quiet" data-remove="${esc(e.key)}" aria-label="Remove ${esc(e.name)}">Remove</button></li>`).join('')}</ul>` : ''}
+          <form class="other-form" data-form="other" autocomplete="off">
+            <input name="name" type="text" placeholder="What was it?" aria-label="Food name" maxlength="60">
+            <div class="grid-2">
+              <label class="field"><span class="label">Calories (kcal)</span><input name="kcal" type="text" inputmode="numeric"></label>
+              <label class="field"><span class="label">Protein (g)</span><input name="protein" type="text" inputmode="numeric"></label>
+            </div>
+            <button class="btn" type="submit">Add to today</button>
+          </form>
+          <p class="hint">Check the label, or use a rough guess. A palm-sized portion of meat or fish is about 25–30 g protein.</p>
+        </section>
         ${plan.slots.some(s => s.swapped) ? '<button class="btn quiet" data-action="reset-swaps">Undo my swaps for this day</button>' : ''}
 
         <a class="card link-card" href="#/recipes">
@@ -134,10 +191,28 @@ const EatScreens = (() => {
         </section>
         <p class="hint center">Calories and protein are estimates. Food labels and portion sizes vary.</p>`,
       mount(page) {
+        page.querySelector('[data-form="other"]').addEventListener('submit', e => {
+          e.preventDefault();
+          const f = e.target.elements;
+          const kcal = Math.round(parseFloat(f.kcal.value.replace(',', '.')));
+          const protein = Math.round(parseFloat(f.protein.value.replace(',', '.'))) || 0;
+          if (!(kcal > 0 && kcal < 5000) || protein < 0 || protein > 300) {
+            UI.toast('Enter the calories as a number');
+            return;
+          }
+          toggleEaten({ key: `own:${Date.now()}`, name: f.name.value.trim() || 'Something else', kcal, protein });
+          UI.toast('Added to today');
+          App.refresh();
+        });
         page.addEventListener('click', e => {
-          const b = e.target.closest('[data-day], [data-goal], [data-action]');
+          const b = e.target.closest('[data-day], [data-goal], [data-action], [data-eat], [data-remove]');
           if (!b) return;
-          if (b.dataset.day) {
+          if (b.dataset.eat) {
+            const added = toggleEaten(entries[Number(b.dataset.eat)]);
+            if (added) navigator.vibrate?.(20);
+          } else if (b.dataset.remove) {
+            toggleEaten(eaten.find(x => x.key === b.dataset.remove));
+          } else if (b.dataset.day) {
             Store.update(s => { s.ui.mealDay = Number(b.dataset.day); });
           } else if (b.dataset.goal) {
             Store.update(s => { s.profile.goal = b.dataset.goal; });
@@ -363,5 +438,5 @@ const EatScreens = (() => {
     };
   }
 
-  return { eat, recipes, recipe };
+  return { eat, recipes, recipe, eatenTotals: () => totals(eatenToday()) };
 })();

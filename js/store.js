@@ -18,6 +18,7 @@ const Store = (() => {
     program: null,   // { type, level, next, week } — the program chosen in Train
     favourites: { exercises: [], recipes: [] },
     mealSwaps: {},   // { 'goal:day:slot': recipe id } — meals you swapped in the plan
+    mealLog: {},     // { 'YYYY-MM-DD': [{ key, name, kcal, protein }] } — what you ate
     active: null,    // the workout in progress
     sessions: [],    // finished workouts
     bodyWeights: [], // { date, kg }

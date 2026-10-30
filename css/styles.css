@@ -978,3 +978,10 @@ body[data-route="welcome"] main { padding-bottom: calc(env(safe-area-inset-botto
 .rec-head { display: flex; align-items: center; gap: 12px; }
 .rec-head h2 { font-size: 22px; line-height: 1.2; }
 .link-card.bests ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; font-size: 15px; }
+
+/* ---------- Meals eaten ---------- */
+.meal-row .check { flex: none; width: 44px; height: 44px; }
+.meal-row.eaten .meal-main strong { color: var(--muted); }
+.other-food { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.other-food li { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.other-form { display: grid; gap: 10px; }

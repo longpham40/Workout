@@ -11,6 +11,7 @@ const Screens = (() => {
   // ---------- Shared pieces ----------
 
   function targetsCard(t) {
+    const ate = EatScreens.eatenTotals();
     return `
       <a class="card link-card" href="#/eat">
         <div>
@@ -19,6 +20,7 @@ const Screens = (() => {
             <div><div class="big">${t.kcal.toLocaleString()}<small>kcal</small></div><div class="muted small">Calories</div></div>
             <div><div class="big">${t.protein}<small>g</small></div><div class="muted small">Protein</div></div>
           </div>
+          ${ate.kcal ? `<p class="small"><strong>Eaten today:</strong> ${ate.kcal.toLocaleString()} kcal · ${ate.protein} g protein</p>` : ''}
           <p class="muted small">Maintenance is about ${t.maintenance.toLocaleString()} kcal. All figures are rough estimates.</p>
         </div>
         ${icon('chevron', 'chev')}
