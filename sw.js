@@ -4,7 +4,7 @@
 
 // Exercise photos aren't listed: each one is saved the first time you open its exercise.
 // That includes the library's extra photos, which come from the jsDelivr CDN.
-const CACHE = 'train-eat-v10';
+const CACHE = 'train-eat-v11';
 const APP_FILES = [
   './',
   './index.html',

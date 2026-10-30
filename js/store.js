@@ -15,7 +15,7 @@ const Store = (() => {
       activity: 'light',
       goal: 'maintain',
     },
-    program: null,   // { type, level, next } — the program chosen in Train
+    program: null,   // { type, level, next, week } — the program chosen in Train
     favourites: { exercises: [], recipes: [] },
     mealSwaps: {},   // { 'goal:day:slot': recipe id } — meals you swapped in the plan
     active: null,    // the workout in progress
@@ -35,6 +35,7 @@ const Store = (() => {
       profile: { ...d.profile, ...saved.profile },
       favourites: { ...d.favourites, ...saved.favourites },
       ui: { ...d.ui, ...saved.ui },
+      program: saved.program ? { next: 0, week: 1, ...saved.program } : null,
     };
   }
 

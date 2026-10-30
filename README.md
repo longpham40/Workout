@@ -51,6 +51,7 @@ To try Chat on your PC, run `npm install` once, set the key in the terminal (`$e
   - `data/exercise-tags.js`: muscles, equipment and category for each coached exercise, used by the library filters
   - `data/exercise-db.json`: 870+ more exercises from free-exercise-db for the library. Rebuild it with `node tools/build-exercise-db.js` (instructions at the top of that file). Their photos load from the jsDelivr CDN and are saved for offline use once seen.
   - `data/programs.js`: the 12 programs. Each exercise line reads `rx('exercise-id', sets, 'reps', rest seconds, 'optional note')`.
+    The week-by-week plans (`WEEK_PLANS`) are at the top of that file: beginner 6 weeks, intermediate 12, advanced 10, cardio 8. Each week can add or remove sets and has a coaching tip.
   - `data/body-areas.js`: the Upper body and Lower body workouts (gym, home and calisthenics at each level), written the same way.
   - `data/exercise-photos.js`: which photo in `images/exercises/` goes with each exercise. To add your own, save `name-0.jpg` (start) and `name-1.jpg` (finish) there and add a line.
   - `data/recipes.js`: recipes. Ingredients are `[amount, 'unit', 'item']` for one portion, so the app can scale them.

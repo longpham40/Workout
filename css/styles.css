@@ -905,3 +905,7 @@ body[data-route="chat"] .page { min-height: calc(100svh - var(--tabbar-h) - env(
 .filter-selects select { min-height: 40px; padding: 6px 26px 6px 11px; text-overflow: ellipsis; border-radius: 999px; background-position: right 10px center; font-weight: 600; font-size: 16px; }
 .filter-selects select.set { border-color: var(--text); background-color: var(--surface); }
 .list-head { margin-top: 8px; }
+
+/* ---------- Program weeks ---------- */
+.week-card { display: grid; gap: 6px; justify-items: start; }
+.weeks .filter { font-variant-numeric: tabular-nums; }

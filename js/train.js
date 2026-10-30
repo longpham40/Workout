@@ -4,8 +4,8 @@
 //   #/train
 //   #/train/gym
 //   #/train/gym/beginner
-//   #/train/gym/beginner/1
-//   #/ex/goblet-squat[/gym/beginner/1/0]   (the extra part shows that day's sets and reps)
+//   #/train/gym/beginner/1[/3]             day 1, as written for week 3
+//   #/ex/goblet-squat[/gym/beginner/1/0/3] (the extra part shows that day's sets and reps in week 3)
 //   #/area/upper                           upper or lower body workouts
 //   #/area/upper/gym/beginner
 //   #/ex/goblet-squat/area/upper/gym/beginner/0
@@ -18,6 +18,38 @@ const TrainScreens = (() => {
   const findLevel = id => LEVELS.find(l => l.id === id);
   const programFor = (typeId, levelId) => PROGRAMS[typeId]?.[levelId];
   const findArea = id => BODY_AREAS.find(a => a.id === id);
+
+  // ---------- Weeks ----------
+
+  const weeksFor = typeId => WEEK_PLANS[typeId === 'cardio' ? 'cardio' : 'strength'];
+  const weekPlan = (typeId, levelId) => weeksFor(typeId)[levelId];
+
+  function setsForWeek(sets, week, index) {
+    let n = sets + (week.sets || 0) + (index < 2 ? week.mainSets || 0 : 0);
+    if (week.scale) n = Math.round(n * week.scale);
+    return Math.max(1, n);
+  }
+
+  // A program day as it should be done in a given week (1-based).
+  function dayForWeek(typeId, levelId, dayNum, weekNum = 1) {
+    const day = programFor(typeId, levelId)?.days[dayNum - 1];
+    const plan = weekPlan(typeId, levelId);
+    if (!day) return null;
+    const n = Math.min(Math.max(1, Number(weekNum) || 1), plan.length);
+    const week = plan[n - 1];
+    return { ...day, week, weekNum: n, weeks: plan.length, main: day.main.map((rx, i) => ({ ...rx, sets: setsForWeek(rx.sets, week, i) })) };
+  }
+
+  // The week you're on, if this is your program; otherwise week 1.
+  function currentWeek(typeId, levelId) {
+    if (!isMyProgram(typeId, levelId)) return 1;
+    return Math.min(Store.state.program.week || 1, weekPlan(typeId, levelId).length);
+  }
+  const programDone = (typeId, levelId) =>
+    isMyProgram(typeId, levelId) && (Store.state.program.week || 1) > weekPlan(typeId, levelId).length;
+
+  // Which week each program page is showing, while the app is open.
+  const viewWeek = {};
   const areaWorkout = (areaId, typeId, levelId) => AREA_WORKOUTS[areaId]?.[typeId]?.[levelId];
 
   function formatRest(seconds) {
@@ -120,12 +152,12 @@ const TrainScreens = (() => {
 
   // ---------- Train home ----------
 
-  function train(typeId, levelId, dayNum) {
+  function train(typeId, levelId, dayNum, weekNum) {
     const type = findType(typeId);
     const level = findLevel(levelId);
     if (type && level) {
       const day = programFor(type.id, level.id).days[Number(dayNum) - 1];
-      return day ? trainDay(type, level, Number(dayNum)) : trainProgram(type, level);
+      return day ? trainDay(type, level, Number(dayNum), Number(weekNum) || currentWeek(type.id, level.id)) : trainProgram(type, level);
     }
     if (type) return trainType(type);
     return trainHome();
@@ -139,7 +171,9 @@ const TrainScreens = (() => {
     return `
       <a class="card link-card accent-card" href="#/train/${type.id}/${level.id}">
         <div>
-          <p class="eyebrow on-accent">My program</p>
+          <p class="eyebrow on-accent">My program · ${programDone(type.id, level.id)
+            ? 'Complete'
+            : `Week ${currentWeek(type.id, level.id)} of ${weekPlan(type.id, level.id).length}`}</p>
           <h3>${esc(type.name)} · ${esc(level.name)}</h3>
         </div>
         ${icon('chevron', 'chev')}
@@ -221,6 +255,7 @@ const TrainScreens = (() => {
                 </div>
                 <p class="muted small">${esc(level.blurb)}</p>
                 <div class="chips">
+                  <span class="chip">${weekPlan(type.id, level.id).length} weeks</span>
                   <span class="chip">${prog.days.length} days a week</span>
                   <span class="chip">${esc(prog.duration)}</span>
                 </div>
@@ -235,7 +270,13 @@ const TrainScreens = (() => {
 
   function trainProgram(type, level) {
     const prog = programFor(type.id, level.id);
+    const plan = weekPlan(type.id, level.id);
     const mine = isMyProgram(type.id, level.id);
+    const done = programDone(type.id, level.id);
+    const now = currentWeek(type.id, level.id);
+    const key = `${type.id}/${level.id}`;
+    const shown = viewWeek[key] || now;
+    const week = plan[shown - 1];
     return {
       title: level.name,
       subtitle: type.name,
@@ -245,18 +286,36 @@ const TrainScreens = (() => {
         <section class="card stack">
           <p>${esc(prog.summary)}</p>
           <div class="chips">
+            <span class="chip">${plan.length} weeks</span>
             <span class="chip">${prog.days.length} days a week</span>
             <span class="chip">${esc(prog.duration)} per session</span>
           </div>
           ${mine
-            ? `<p class="chosen">${icon('check', 'inline')} This is your program</p>`
+            ? `<p class="chosen">${icon('check', 'inline')} This is your program${done ? '' : ` · week ${now} of ${plan.length}`}</p>`
             : '<button class="btn primary" data-action="choose">Make this my program</button>'}
         </section>
 
-        ${sectionTitle('Your week')}
+        ${done ? `
+          <section class="card note stack">
+            <h3>Program complete. Well done!</h3>
+            <p class="small">Repeat it with the heavier weights or harder versions you finished on, or move up a level.</p>
+            <button class="btn primary" data-action="restart">Start again from week 1</button>
+          </section>` : ''}
+
+        ${sectionTitle('Week by week')}
+        <div class="filters weeks" role="group" aria-label="Choose a week">
+          ${plan.map((w, i) => `<button class="filter" data-week="${i + 1}" aria-pressed="${i + 1 === shown}">Week ${i + 1}${mine && !done && i + 1 === now ? ' · now' : ''}</button>`).join('')}
+        </div>
+        <section class="card week-card">
+          <p class="eyebrow">Week ${shown} of ${plan.length}</p>
+          <h3>${esc(week.focus)}</h3>
+          <p class="small">${esc(week.tip)}</p>
+          ${mine && !done && shown !== now ? `<button class="btn small-btn" data-action="set-week">Make week ${shown} my current week</button>` : ''}
+        </section>
+
         <p class="muted small pad-x">${esc(prog.schedule)}</p>
         ${prog.days.map((day, i) => `
-          <a class="card link-card" href="#/train/${type.id}/${level.id}/${i + 1}">
+          <a class="card link-card" href="#/train/${type.id}/${level.id}/${i + 1}/${shown}">
             <span class="day-num" style="--c: var(--${type.id})">${i + 1}</span>
             <div>
               <h3>${esc(day.name)}</h3>
@@ -273,10 +332,29 @@ const TrainScreens = (() => {
         </section>`,
       mount(page) {
         page.querySelector('[data-action="choose"]')?.addEventListener('click', () => {
-          Store.update(s => { s.program = { type: type.id, level: level.id, next: 0 }; });
+          Store.update(s => { s.program = { type: type.id, level: level.id, next: 0, week: 1 }; });
+          delete viewWeek[key];
           App.refresh();
-          UI.toast('Program saved');
+          UI.toast('Program saved. You’re on week 1.');
         });
+        page.querySelector('[data-action="restart"]')?.addEventListener('click', () => {
+          Store.update(s => { s.program.week = 1; s.program.next = 0; });
+          delete viewWeek[key];
+          App.refresh();
+        });
+        page.querySelector('[data-action="set-week"]')?.addEventListener('click', () => {
+          Store.update(s => { s.program.week = shown; s.program.next = 0; });
+          delete viewWeek[key];
+          App.refresh();
+          UI.toast(`You’re now on week ${shown}`);
+        });
+        page.querySelector('.weeks').addEventListener('click', e => {
+          const b = e.target.closest('[data-week]');
+          if (!b) return;
+          viewWeek[key] = Number(b.dataset.week);
+          App.refresh();
+        });
+        page.querySelector('.weeks [aria-pressed="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' });
       },
     };
   }
@@ -284,9 +362,10 @@ const TrainScreens = (() => {
   // ---------- One training day ----------
 
   // Warm-up, exercise list, cool-down and Start button. exPath is each exercise's address, minus its index.
-  function workoutBody(typeId, workout, exPath, inProgress) {
+  function workoutBody(typeId, workout, exPath, inProgress, exSuffix = '') {
     return `
         <p class="muted pad-x">${esc(workout.focus)}</p>
+        ${workout.week ? `<section class="card note small"><strong>Week ${workout.weekNum} of ${workout.weeks} · ${esc(workout.week.focus)}.</strong> ${esc(workout.week.tip)}</section>` : ''}
         ${workout.note ? `<section class="card note small">${esc(workout.note)}</section>` : ''}
 
         ${sectionTitle('Warm-up · 5–10 min')}
@@ -295,7 +374,7 @@ const TrainScreens = (() => {
         ${sectionTitle('Workout')}
         <div class="list">
           ${workout.main.map((item, i) => `
-            <a class="row-link" href="#/ex/${item.ex}/${exPath}/${i}">
+            <a class="row-link" href="#/ex/${item.ex}/${exPath}/${i}${exSuffix}">
               ${thumb(item.ex, i + 1)}
               <span class="row-main">
                 <strong>${esc(EXERCISES[item.ex].name)}</strong>
@@ -312,16 +391,16 @@ const TrainScreens = (() => {
         <p class="hint center">Tick off each set as you go. A rest timer starts after every set.</p>`;
   }
 
-  function trainDay(type, level, dayNum) {
-    const day = programFor(type.id, level.id).days[dayNum - 1];
+  function trainDay(type, level, dayNum, weekNum) {
+    const day = dayForWeek(type.id, level.id, dayNum, weekNum);
     return {
       title: day.name,
-      subtitle: `${type.name} · ${level.name} · Day ${dayNum}`,
+      subtitle: `${type.name} · ${level.name} · Week ${day.weekNum} · Day ${dayNum}`,
       tab: 'train',
       back: { href: `#/train/${type.id}/${level.id}`, label: level.name },
-      html: workoutBody(type.id, day, `${type.id}/${level.id}/${dayNum}`, isInProgress({ type: type.id, level: level.id, dayNum })),
+      html: workoutBody(type.id, day, `${type.id}/${level.id}/${dayNum}`, isInProgress({ type: type.id, level: level.id, dayNum }), `/${day.weekNum}`),
       mount(page) {
-        page.querySelector('[data-action="start"]').addEventListener('click', () => Session.startFromDay(type.id, level.id, dayNum));
+        page.querySelector('[data-action="start"]').addEventListener('click', () => Session.startFromDay(type.id, level.id, dayNum, day.weekNum));
       },
     };
   }
@@ -393,10 +472,11 @@ const TrainScreens = (() => {
       const item = areaWorkout(areaId, typeId, levelId)?.main[Number(index)];
       return item && { item, typeId, back: { href: `#/area/${areaId}/${typeId}/${levelId}`, label: findArea(areaId).name } };
     }
-    const [typeId, levelId, dayNum, index] = params;
-    const day = programFor(typeId, levelId)?.days[Number(dayNum) - 1];
+    const [typeId, levelId, dayNum, index, weekNum] = params;
+    if (!programFor(typeId, levelId)) return null;
+    const day = dayForWeek(typeId, levelId, Number(dayNum), weekNum);
     const item = day?.main[Number(index)];
-    return item && { item, typeId, back: { href: `#/train/${typeId}/${levelId}/${dayNum}`, label: day.name } };
+    return item && { item, typeId, back: { href: `#/train/${typeId}/${levelId}/${dayNum}/${day.weekNum}`, label: day.name } };
   }
 
   function exercise(id, ...params) {
@@ -618,6 +698,7 @@ const TrainScreens = (() => {
   }
 
   // The next session in "My program", for the Today screen.
+  // { done: true } once every week is finished.
   function nextWorkout() {
     const mine = Store.state.program;
     const type = findType(mine?.type);
@@ -625,11 +706,17 @@ const TrainScreens = (() => {
     if (!type || !level) return null;
     const days = programFor(type.id, level.id).days;
     const index = (mine.next || 0) % days.length;
-    return { type, level, day: days[index], dayNum: index + 1 };
+    const week = currentWeek(type.id, level.id);
+    return {
+      type, level, dayNum: index + 1, week,
+      weeks: weekPlan(type.id, level.id).length,
+      day: dayForWeek(type.id, level.id, index + 1, week),
+      done: programDone(type.id, level.id),
+    };
   }
 
   const typesFor = id => typesByExercise[id] || new Set();
   const levelFor = id => levelByExercise[id] || 'beginner';
 
-  return { train, area, exercise, extraExercise, library, nextWorkout, typesFor, levelFor, doseLine, photoFrame, startPhotos, thumb };
+  return { train, area, exercise, extraExercise, library, nextWorkout, dayForWeek, typesFor, levelFor, doseLine, photoFrame, startPhotos, thumb };
 })();

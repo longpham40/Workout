@@ -61,12 +61,23 @@ const Screens = (() => {
           ${icon('chevron', 'chev')}
         </a>`;
     }
-    const { type, level, day, dayNum } = next;
+    const { type, level, day, dayNum, week, weeks, done } = next;
+    if (done) {
+      return `
+        <a class="card link-card note" href="#/train/${type.id}/${level.id}">
+          <span class="type-icon" style="--c: var(--${type.id})">${icon('trophy')}</span>
+          <div>
+            <h3>Program complete</h3>
+            <p class="muted small">${esc(type.name)} · ${esc(level.name)}. Start it again stronger, or move up a level.</p>
+          </div>
+          ${icon('chevron', 'chev')}
+        </a>`;
+    }
     return `
-      <a class="card link-card" href="#/train/${type.id}/${level.id}/${dayNum}">
+      <a class="card link-card" href="#/train/${type.id}/${level.id}/${dayNum}/${week}">
         <span class="type-icon" style="--c: var(--${type.id})">${icon(type.icon)}</span>
         <div>
-          <p class="eyebrow">Next workout · Day ${dayNum}</p>
+          <p class="eyebrow">Next workout · Week ${week} of ${weeks} · Day ${dayNum}</p>
           <h3>${esc(day.name)}</h3>
           <p class="muted small">${esc(type.name)} · ${esc(level.name)} · ${day.main.length} exercise${day.main.length === 1 ? '' : 's'}</p>
         </div>

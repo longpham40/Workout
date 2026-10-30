@@ -126,7 +126,7 @@ const Session = (() => {
     return true;
   }
 
-  // Where a workout came from: { type, level, dayNum } for a program day, { area, type, level } for upper/lower.
+  // Where a workout came from: { type, level, dayNum, week } for a program day, { area, type, level } for upper/lower.
   const sameSource = (a, b) => !!a && !!b &&
     a.type === b.type && a.level === b.level && a.dayNum === b.dayNum && a.area === b.area;
 
@@ -145,9 +145,9 @@ const Session = (() => {
     if (started) location.hash = '#/session';
   }
 
-  function startFromDay(typeId, levelId, dayNum) {
-    const day = PROGRAMS[typeId][levelId].days[dayNum - 1];
-    startFrom({ type: typeId, level: levelId, dayNum }, day.name, day);
+  function startFromDay(typeId, levelId, dayNum, week = 1) {
+    const day = TrainScreens.dayForWeek(typeId, levelId, dayNum, week);
+    startFrom({ type: typeId, level: levelId, dayNum, week: day.weekNum }, day.name, day);
   }
 
   function startFromArea(areaId, typeId, levelId) {
@@ -231,6 +231,9 @@ const Session = (() => {
       // Move "My program" on to the day after this one.
       if (a.source?.dayNum && s.program?.type === a.source.type && s.program?.level === a.source.level) {
         s.program.next = a.source.dayNum;
+        // Finishing the last day of your current week moves you on to the next week.
+        const lastDay = PROGRAMS[a.source.type][a.source.level].days.length;
+        if (a.source.dayNum === lastDay && (a.source.week || 1) === (s.program.week || 1)) s.program.week = (s.program.week || 1) + 1;
       }
     });
     Timer.stop();
@@ -496,7 +499,7 @@ const Session = (() => {
         <section class="card empty">
           <h3>No workout in progress</h3>
           <p class="muted small">Start your next program day, or log a workout of your own.</p>
-          ${next ? `<a class="btn primary" href="#/train/${next.type.id}/${next.level.id}/${next.dayNum}">Next: ${esc(next.day.name)}</a>` : ''}
+          ${next && !next.done ? `<a class="btn primary" href="#/train/${next.type.id}/${next.level.id}/${next.dayNum}/${next.week}">Next: ${esc(next.day.name)}</a>` : ''}
           <button class="btn" data-action="free">Log my own workout</button>
         </section>`,
       mount: page => page.querySelector('[data-action="free"]').addEventListener('click', startFree),

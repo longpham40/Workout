@@ -46,6 +46,85 @@ const COOLDOWNS = {
   calisthenics: ['Doorway chest stretch', 'Lat stretch holding a bar or door frame', 'Wrist stretches, palms down then palms up'],
 };
 
+// Week-by-week plans. Every program at a level follows the same weeks, applied to its own days.
+// A week can change the sets written in the program:
+//   sets      add (or remove, if negative) sets on every exercise. Never goes below 1.
+//   mainSets  add sets to the first two exercises only: your main lifts
+//   scale     multiply the sets, e.g. 0.5 halves them in a lighter week
+// For cardio, sets are rounds of intervals; steady sessions change by time, as the tip says.
+const STRENGTH_BLOCK = {
+  // 6 weeks, with a lighter 6th week.
+  beginner: [
+    { focus: 'Learn the movements', sets: -1, tip: 'One fewer set than written. Use light weights or easier versions and finish every set with 3–4 good reps left.' },
+    { focus: 'Full sets', tip: 'Do every set as written. Leave about 3 reps in the tank.' },
+    { focus: 'More reps', tip: 'Same weights or versions as last week. Aim for 1–2 more reps per set.' },
+    { focus: 'First step up', tip: 'Where you hit the top of the rep range on every set last week, add the smallest weight step or move to a harder version.' },
+    { focus: 'Build', tip: 'Add reps at your new weights or versions. Keep 2 reps in reserve.' },
+    { focus: 'Lighter week', sets: -1, tip: 'One fewer set, same weights. Let your body catch up. Next, repeat the program with heavier weights or move up a level.' },
+  ],
+  // 6 weeks, with a lighter 6th week. Intermediate programs run it twice.
+  intermediate: [
+    { focus: 'Settle in', tip: 'Start about 10% lighter than your best. Finish each set with 2–3 reps in reserve.' },
+    { focus: 'Fill the range', tip: 'Same weights. Aim for the top of each rep range.' },
+    { focus: 'Add load', tip: 'Add a small weight step, or a harder version, on your first two exercises.' },
+    { focus: 'Push the reps', tip: 'Keep the new weights and add reps. Stop each set 1–2 reps short of failure.' },
+    { focus: 'Heavy week', tip: 'Add load again where your reps allow. Stop 1 rep short of failure, never grind.' },
+    { focus: 'Lighter week', scale: 0.5, tip: 'Half the sets at about 10% lighter. Sleep and eat well.' },
+  ],
+  // 5 weeks, with a lighter 5th week. Advanced programs run it twice.
+  advanced: [
+    { focus: 'Base', tip: 'Moderate weights, 2–3 reps in reserve. Sharpen your technique on every rep.' },
+    { focus: 'Build volume', mainSets: 1, tip: 'One extra set on your first two exercises. Same weights as last week.' },
+    { focus: 'Overload', mainSets: 1, tip: 'Keep the extra set and add load to your first two exercises.' },
+    { focus: 'Peak', tip: 'Back to normal sets, at your heaviest weights of the block. 1 rep in reserve on main lifts.' },
+    { focus: 'Lighter week', scale: 0.5, tip: 'Half the sets at about 60–70% of your usual weights. Keep the movements crisp.' },
+  ],
+};
+
+const CARDIO_BLOCK = {
+  // 8 weeks, with lighter 4th and 8th weeks.
+  beginner: [
+    { focus: 'Easy start', sets: -1, tip: 'One round fewer than written, and keep steady sessions at the short end. You should be able to chat the whole time.' },
+    { focus: 'As written', tip: 'Do each session as written, at an easy, chatty pace.' },
+    { focus: 'A little longer', tip: 'Add about 5 minutes to steady sessions.' },
+    { focus: 'Lighter week', sets: -1, tip: 'Cut every session by about a third so your legs can recover.' },
+    { focus: 'One more round', sets: 1, tip: 'One extra round of intervals. Steady sessions as in week 3.' },
+    { focus: 'Build', sets: 1, tip: 'Add 5 more minutes to your longest steady session.' },
+    { focus: 'Two more rounds', sets: 2, tip: 'Two extra rounds. If jogging feels comfortable, make each jog 30 seconds longer.' },
+    { focus: 'Lighter week and test', tip: 'Easy sessions, then on your last day see how long you can jog without stopping.' },
+  ],
+  intermediate: [
+    { focus: 'Base', tip: 'Keep easy runs truly easy. Hard sessions as written.' },
+    { focus: 'Longer long run', tip: 'Add 5–10 minutes to your long run.' },
+    { focus: 'One more interval', sets: 1, tip: 'One extra interval. Long run as last week.' },
+    { focus: 'Lighter week', scale: 0.7, tip: 'Cut total time by about 30% and keep everything easy.' },
+    { focus: 'Build', sets: 1, tip: 'Back to week 3, and add 5 minutes to your long run.' },
+    { focus: 'Peak', sets: 2, tip: 'Two extra intervals and your longest long run so far.' },
+    { focus: 'Hold it', sets: 2, tip: 'Repeat week 6, aiming for steadier paces.' },
+    { focus: 'Lighter week and test', scale: 0.7, tip: 'Shorter sessions, then a time trial on your last day: run 5 km or 30 minutes as evenly as you can.' },
+  ],
+  advanced: [
+    { focus: 'Base', tip: 'Easy days easy, hard days hard. Don’t let them drift into the middle.' },
+    { focus: 'Longer long run', tip: 'Add 10 minutes to your long run.' },
+    { focus: 'One more rep', sets: 1, tip: 'One extra interval or hill sprint.' },
+    { focus: 'Lighter week', scale: 0.65, tip: 'Cut volume by about a third and keep a few short, fast strides.' },
+    { focus: 'Build', sets: 1, tip: 'Back to week 3, with your tempo run 5 minutes longer.' },
+    { focus: 'Peak', sets: 2, tip: 'Two extra reps on interval days and your longest long run.' },
+    { focus: 'Sharpen', sets: 1, tip: 'Slightly less volume, slightly faster intervals.' },
+    { focus: 'Lighter week and race', scale: 0.65, tip: 'Easy all week, then race or time-trial your favourite distance.' },
+  ],
+};
+
+const secondBlock = block => block.map(w => ({ ...w, focus: `Block 2: ${w.focus.toLowerCase()}` }));
+const WEEK_PLANS = {
+  strength: {
+    beginner: STRENGTH_BLOCK.beginner,
+    intermediate: [...STRENGTH_BLOCK.intermediate, ...secondBlock(STRENGTH_BLOCK.intermediate)],
+    advanced: [...STRENGTH_BLOCK.advanced, ...secondBlock(STRENGTH_BLOCK.advanced)],
+  },
+  cardio: CARDIO_BLOCK,
+};
+
 const PROGRAMS = {
   // ======================= GYM WEIGHTS =======================
   gym: {
@@ -414,7 +493,7 @@ const PROGRAMS = {
         {
           name: 'Walk-run',
           focus: 'Your first steps into running',
-          main: [rx('walk-run-intervals', 7, '1 min jog + 2 min walk', 0, 'Seven rounds is about 21 minutes.')],
+          main: [rx('walk-run-intervals', 7, '1 min jog + 2 min walk', 0, 'Each round takes 3 minutes.')],
         },
         { name: 'Machine day', focus: 'No-impact stamina', main: [rx('easy-cardio-machine', 1, '20–30 min', 0)] },
       ],

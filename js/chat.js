@@ -34,7 +34,8 @@ const ChatScreens = (() => {
     if (p.activity) lines.push(`Activity: ${Nutrition.ACTIVITY[p.activity]?.label}.`);
     lines.push(`Prefers ${p.units === 'imperial' ? 'lb and feet' : 'kg and cm'}.`);
     const next = TrainScreens.nextWorkout();
-    if (next) lines.push(`Program: ${next.type.name}, ${next.level.name}. Next workout: day ${next.dayNum}, ${next.day.name}.`);
+    if (next?.done) lines.push(`Program: ${next.type.name}, ${next.level.name}. They have finished all ${next.weeks} weeks.`);
+    else if (next) lines.push(`Program: ${next.type.name}, ${next.level.name}, week ${next.week} of ${next.weeks} (${next.day.week.focus}). Next workout: day ${next.dayNum}, ${next.day.name}.`);
     else lines.push('No training program chosen yet.');
     const weekStart = UI.startOfWeek();
     lines.push(`Workouts logged: ${s.sessions.length} in total, ${s.sessions.filter(x => x.date >= weekStart).length} this week.`);
