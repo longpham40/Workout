@@ -85,6 +85,151 @@ const Screens = (() => {
       </a>`;
   }
 
+  function recentBestsCard() {
+    const bests = ProgressScreens.recentBests(3);
+    if (!bests.length) return '';
+    return `
+      <a class="card link-card bests" href="#/bests">
+        <div>
+          <p class="eyebrow">${icon('trophy', 'inline')} Recent personal bests</p>
+          <ul>${bests.map(b => `<li>${esc(b.name)}: <strong>${esc(b.label)}</strong> <span class="muted small">· ${Charts.shortDate(b.date)}</span></li>`).join('')}</ul>
+        </div>
+        ${icon('chevron', 'chev')}
+      </a>`;
+  }
+
+  // ---------- Welcome: a few questions, then a recommended program ----------
+
+  const WELCOME = {
+    goal: {
+      question: 'What’s your main goal?',
+      options: [
+        { id: 'muscle', name: 'Build muscle and strength', blurb: 'Get stronger and add some size.' },
+        { id: 'lose', name: 'Lose fat', blurb: 'Drop weight while keeping your muscle.' },
+        { id: 'fitness', name: 'Get fitter', blurb: 'More stamina for running, sport or everyday life.' },
+        { id: 'health', name: 'Stay healthy', blurb: 'Feel good and keep moving, at a steady weight.' },
+      ],
+    },
+    level: {
+      question: 'How much have you trained before?',
+      options: LEVELS.map(l => ({ id: l.id, name: l.name, blurb: l.blurb })),
+    },
+    kit: {
+      question: 'What can you train with?',
+      options: [
+        { id: 'gym', name: 'A gym', blurb: 'Barbells, dumbbells and machines.' },
+        { id: 'home', name: 'Home, little or no equipment', blurb: 'Your bodyweight, maybe dumbbells or a band.' },
+        { id: 'bar', name: 'A pull-up bar or park bars', blurb: 'Bodyweight skills: pull-ups, dips, push-ups.' },
+        { id: 'outdoors', name: 'Running shoes', blurb: 'Walking, running, or a bike or rower.' },
+      ],
+    },
+  };
+  const GOAL_TO_NUTRITION = { muscle: 'gain', lose: 'lose', fitness: 'maintain', health: 'maintain' };
+
+  // Equipment decides the style; wanting fitness points to cardio unless you're set on lifting at a gym.
+  function recommend({ goal, level, kit }) {
+    if (!goal || !level || !kit) return null;
+    let type = { gym: 'gym', home: 'home', bar: 'calisthenics', outdoors: 'cardio' }[kit];
+    if (goal === 'fitness' && kit === 'home') type = 'cardio';
+    const why = {
+      gym: 'You have a gym, and weights are the most reliable way to build strength and muscle.',
+      home: 'You can do it at home with little or no kit, and it builds strength and burns calories.',
+      calisthenics: 'You have bars to train on, and bodyweight skills build real strength with no weights.',
+      cardio: 'It builds your heart, lungs and stamina step by step, and it’s great for fat loss too.',
+    }[type];
+    return { type: TRAINING_TYPES.find(t => t.id === type), level: LEVELS.find(l => l.id === level), why };
+  }
+
+  const answers = {};
+
+  function welcome() {
+    const group = key => {
+      const g = WELCOME[key];
+      return `
+        <fieldset class="choices">
+          <legend class="section-title">${esc(g.question)}</legend>
+          ${g.options.map(o => `
+            <label class="choice">
+              <input type="radio" name="${key}" value="${o.id}"${answers[key] === o.id ? ' checked' : ''}>
+              <span><strong>${esc(o.name)}</strong><span class="muted small block">${esc(o.blurb)}</span></span>
+            </label>`).join('')}
+        </fieldset>`;
+    };
+    return {
+      title: 'Welcome',
+      subtitle: 'Train & Eat',
+      tab: 'none',
+      html: `
+        <p class="lead pad-x">Three quick questions and we’ll suggest a program to start with. You can change it any time.</p>
+        <form class="welcome" autocomplete="off">
+          ${group('goal')}
+          ${group('level')}
+          ${group('kit')}
+        </form>
+        <div data-result></div>
+        <button class="btn quiet" data-action="skip">Skip for now</button>`,
+      mount(page) {
+        const result = page.querySelector('[data-result]');
+        const draw = () => {
+          const rec = recommend(answers);
+          if (!rec) {
+            result.innerHTML = '';
+            return;
+          }
+          const prog = PROGRAMS[rec.type.id][rec.level.id];
+          const weeks = WEEK_PLANS[rec.type.id === 'cardio' ? 'cardio' : 'strength'][rec.level.id].length;
+          result.innerHTML = `
+            <section class="card stack recommend" style="--c: var(--${rec.type.id})">
+              <p class="eyebrow">We recommend</p>
+              <div class="rec-head">
+                <span class="type-icon">${icon(rec.type.icon)}</span>
+                <h2>${esc(rec.type.name)} · ${esc(rec.level.name)}</h2>
+              </div>
+              <div class="chips">
+                <span class="chip">${weeks} weeks</span>
+                <span class="chip">${prog.days.length} days a week</span>
+                <span class="chip">${esc(prog.duration)}</span>
+              </div>
+              <p class="small">${esc(rec.why)} ${esc(prog.summary)}</p>
+              <button class="btn primary" data-action="start">Start this program</button>
+              <a class="btn quiet" href="#/train" data-action="browse">Look at all programs</a>
+            </section>`;
+          result.querySelector('.recommend').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+        const done = () => Store.update(s => {
+          s.ui.onboarded = true;
+          if (answers.goal) s.profile.goal = GOAL_TO_NUTRITION[answers.goal];
+        });
+        page.querySelector('.welcome').addEventListener('change', e => {
+          answers[e.target.name] = e.target.value;
+          draw();
+        });
+        page.addEventListener('click', e => {
+          const action = e.target.closest('[data-action]')?.dataset.action;
+          if (action === 'skip') {
+            done();
+            location.hash = '#/today';
+          } else if (action === 'browse') {
+            done();
+          } else if (action === 'start') {
+            const rec = recommend(answers);
+            done();
+            Store.update(s => { s.program = { type: rec.type.id, level: rec.level.id, next: 0, week: 1 }; });
+            UI.toast('Program saved. You’re on week 1.');
+            location.hash = '#/today';
+          }
+        });
+        draw();
+      },
+    };
+  }
+
+  // First visit with nothing saved yet: show the welcome questions.
+  function needsWelcome() {
+    const s = Store.state;
+    return !s.ui.onboarded && !s.program && !s.sessions.length && !s.profile.age;
+  }
+
   // ---------- Today ----------
 
   function today() {
@@ -100,11 +245,12 @@ const Screens = (() => {
         ${t ? targetsCard(t) : setupCard()}
         <section class="stats">
           ${stat('This week', s.sessions.filter(x => x.date >= weekStart).length)}
-          ${stat('Workouts', s.sessions.length)}
+          ${stat('Week streak', ProgressScreens.weekStreak())}
           ${stat('Goal', Nutrition.GOALS[s.profile.goal].short)}
         </section>
         ${s.active ? '' : nextWorkoutCard()}
-        ${s.active ? '' : '<button class="btn quiet" data-action="free">+ Log my own workout</button>'}`,
+        ${s.active ? '' : '<button class="btn quiet" data-action="free">+ Log my own workout</button>'}
+        ${recentBestsCard()}`,
       mount(page) {
         page.addEventListener('click', e => {
           const action = e.target.closest('[data-action]')?.dataset.action;
@@ -173,6 +319,8 @@ const Screens = (() => {
           </label>
           <p class="hint">Used to estimate your calorie and protein targets. It stays on this phone, except that the basics go with your questions when you use Chat.</p>
         </form>
+
+        <a class="btn quiet" href="#/welcome">Answer the setup questions again</a>
 
         ${sectionTitle('Your data')}
         <section class="card form">
@@ -246,5 +394,5 @@ const Screens = (() => {
     });
   }
 
-  return { today, settings };
+  return { today, settings, welcome, needsWelcome };
 })();

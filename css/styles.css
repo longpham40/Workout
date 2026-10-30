@@ -955,3 +955,26 @@ body[data-route="chat"] .page { min-height: calc(100svh - var(--tabbar-h) - env(
 @media (prefers-reduced-motion: reduce) {
   .bests.celebrate { animation: none; }
 }
+
+/* ---------- Welcome ---------- */
+body[data-route="welcome"] .tabbar { display: none; }
+body[data-route="welcome"] main { padding-bottom: calc(env(safe-area-inset-bottom) + 32px); }
+.welcome { display: grid; gap: 4px; }
+.choices { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.choices legend { padding: 0; margin: 12px 4px 6px; }
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.choice input { width: 22px; min-height: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--accent); }
+.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.recommend { border-color: var(--c); }
+.rec-head { display: flex; align-items: center; gap: 12px; }
+.rec-head h2 { font-size: 22px; line-height: 1.2; }
+.link-card.bests ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; font-size: 15px; }

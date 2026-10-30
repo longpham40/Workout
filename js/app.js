@@ -22,6 +22,7 @@ const App = (() => {
     favourites: ProgressScreens.favourites,
     chat: ChatScreens.chat,
     settings: Screens.settings,
+    welcome: Screens.welcome,
   };
 
   document.querySelectorAll('[data-icon]').forEach(el => { el.outerHTML = UI.icon(el.dataset.icon); });
@@ -29,6 +30,10 @@ const App = (() => {
   function render({ keepScroll = false } = {}) {
     const [name, ...params] = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
     const key = routes[name] ? name : 'today';
+    if (key === 'today' && Screens.needsWelcome()) {
+      location.replace('#/welcome');
+      return;
+    }
     const screen = routes[key](...params);
 
     document.title = `${screen.title} · Train & Eat`;
@@ -39,7 +44,7 @@ const App = (() => {
         ${screen.subtitle ? `<p class="eyebrow">${UI.esc(screen.subtitle)}</p>` : ''}
         <div class="appbar-row">
           <h1>${UI.esc(screen.title)}</h1>
-          ${key === 'settings' ? '' : `<a class="appbar-btn" href="#/settings" aria-label="Settings">${UI.icon('settings')}</a>`}
+          ${key === 'settings' || key === 'welcome' ? '' : `<a class="appbar-btn" href="#/settings" aria-label="Settings">${UI.icon('settings')}</a>`}
         </div>
       </div>`;
 

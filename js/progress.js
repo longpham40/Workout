@@ -294,7 +294,8 @@ const ProgressScreens = (() => {
   function recentBests(limit) {
     const list = [];
     for (const s of [...Store.state.sessions].reverse()) {
-      for (const b of s.bests || []) list.push({ ...b, date: s.date });
+      // The latest best for each exercise, so one lift doesn't fill the list.
+      for (const b of s.bests || []) if (!list.some(x => x.name === b.name)) list.push({ ...b, date: s.date });
       if (list.length >= limit) break;
     }
     return list.slice(0, limit);
