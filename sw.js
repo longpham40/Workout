@@ -3,7 +3,8 @@
 // and falls back to the saved copy when there's no signal.
 
 // Exercise photos aren't listed: each one is saved the first time you open its exercise.
-const CACHE = 'train-eat-v9';
+// That includes the library's extra photos, which come from the jsDelivr CDN.
+const CACHE = 'train-eat-v10';
 const APP_FILES = [
   './',
   './index.html',
@@ -12,6 +13,8 @@ const APP_FILES = [
   './data/workouts.js',
   './data/exercises.js',
   './data/exercise-photos.js',
+  './data/exercise-tags.js',
+  './data/exercise-db.json',
   './data/programs.js',
   './data/body-areas.js',
   './data/recipes.js',
@@ -21,6 +24,7 @@ const APP_FILES = [
   './js/nutrition.js',
   './js/timer.js',
   './js/train.js',
+  './js/exercise-db.js',
   './js/session.js',
   './js/eat.js',
   './js/charts.js',
@@ -65,9 +69,28 @@ function fromNetwork(request) {
   });
 }
 
+const PHOTO_CDN = 'https://cdn.jsdelivr.net';
+
+// CDN photos never change, so use the saved copy when there is one.
+function fromCacheFirst(request) {
+  return caches.match(request).then(cached => cached || fetch(request).then(response => {
+    if (response.ok || response.type === 'opaque') {
+      const copy = response.clone();
+      caches.open(CACHE).then(cache => cache.put(request, copy));
+    }
+    return response;
+  }));
+}
+
 self.addEventListener('fetch', event => {
   const { request } = event;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+  if (request.method !== 'GET') return;
+  const origin = new URL(request.url).origin;
+  if (origin === PHOTO_CDN) {
+    event.respondWith(fromCacheFirst(request));
+    return;
+  }
+  if (origin !== self.location.origin) return;
 
   event.respondWith(
     fromNetwork(request).catch(() =>

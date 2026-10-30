@@ -12,6 +12,7 @@ const DATA_FILES = [
   'data/workouts.js',
   'data/exercises.js',
   'data/exercise-photos.js',
+  'data/exercise-tags.js',
   'data/programs.js',
   'data/body-areas.js',
   'data/recipes.js',
@@ -53,6 +54,25 @@ function checkWorkout(where, workout) {
     if (!(rx.sets >= 1)) fail(`${where} #${i + 1}: sets should be 1 or more`);
     if (!rx.reps) fail(`${where} #${i + 1}: missing reps`);
   });
+}
+
+// Library tags and the full exercise list (data/exercise-db.json).
+const MUSCLES = new Set(['abdominals', 'abductors', 'adductors', 'biceps', 'calves', 'chest', 'forearms', 'glutes', 'hamstrings',
+  'lats', 'lower back', 'middle back', 'neck', 'quadriceps', 'shoulders', 'traps', 'triceps']);
+const GEAR = new Set(['bodyweight', 'dumbbell', 'barbell', 'kettlebell', 'machine', 'cable', 'bands', 'other']);
+const db = JSON.parse(fs.readFileSync(path.join(ROOT, 'data/exercise-db.json'), 'utf8'));
+const dbIds = new Set(db.map(e => e.id));
+for (const id of Object.keys(EXERCISES)) if (!ctx.EXERCISE_TAGS[id]) fail(`exercise ${id}: no tags in data/exercise-tags.js`);
+for (const [id, tag] of Object.entries(ctx.EXERCISE_TAGS)) {
+  if (!EXERCISES[id]) fail(`tags for unknown exercise ${id}`);
+  if (!tag.primary?.length) fail(`tags ${id}: no primary muscles`);
+  for (const m of [...(tag.primary || []), ...(tag.secondary || [])]) if (!MUSCLES.has(m)) fail(`tags ${id}: unknown muscle "${m}"`);
+  if (!GEAR.has(tag.gear)) fail(`tags ${id}: unknown gear "${tag.gear}"`);
+  if (tag.db && !dbIds.has(tag.db)) fail(`tags ${id}: "${tag.db}" isn't in data/exercise-db.json`);
+}
+for (const e of db) {
+  if (!e.name || !e.steps?.length || !e.primary?.length) fail(`exercise-db ${e.id}: missing name, steps or muscles`);
+  if (!GEAR.has(e.gear)) fail(`exercise-db ${e.id}: unknown gear "${e.gear}"`);
 }
 
 // Programs: every type and level, every day.
@@ -99,7 +119,7 @@ for (const [, src] of html.matchAll(/<script src="([^"]+)"/g)) {
   if (!sw.includes(`'./${src}'`)) fail(`${src} isn't in sw.js APP_FILES, so it won't work offline`);
 }
 
-const counts = `${Object.keys(EXERCISES).length} exercises, ${Object.keys(RECIPES).length} recipes`;
+const counts = `${Object.keys(EXERCISES).length} coached exercises, ${db.length} library exercises, ${Object.keys(RECIPES).length} recipes`;
 if (problems.length) {
   console.log(`Found ${problems.length} problem${problems.length === 1 ? '' : 's'} (${counts}):`);
   for (const p of problems) console.log(`  - ${p}`);

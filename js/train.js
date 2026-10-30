@@ -10,6 +10,7 @@
 //   #/area/upper/gym/beginner
 //   #/ex/goblet-squat/area/upper/gym/beginner/0
 //   #/library
+//   #/x/Air_Bike                           an exercise from the full free-exercise-db library
 const TrainScreens = (() => {
   const { icon, esc, sectionTitle } = UI;
 
@@ -29,13 +30,22 @@ const TrainScreens = (() => {
   const isMyProgram = (typeId, levelId) =>
     Store.state.program?.type === typeId && Store.state.program?.level === levelId;
 
-  // Which training types use each exercise, for the library filters.
+  // Which training types and levels use each exercise, for the library filters.
   const typesByExercise = {};
+  const levelByExercise = {};
+  const LEVEL_RANK = { beginner: 0, intermediate: 1, advanced: 2 };
+  function noteUse(exId, typeId, levelId) {
+    (typesByExercise[exId] ||= new Set()).add(typeId);
+    if (!(exId in levelByExercise) || LEVEL_RANK[levelId] < LEVEL_RANK[levelByExercise[exId]]) levelByExercise[exId] = levelId;
+  }
   for (const [typeId, levels] of Object.entries(PROGRAMS)) {
-    for (const prog of Object.values(levels)) {
-      for (const day of prog.days) {
-        for (const item of day.main) (typesByExercise[item.ex] ||= new Set()).add(typeId);
-      }
+    for (const [levelId, prog] of Object.entries(levels)) {
+      for (const day of prog.days) for (const item of day.main) noteUse(item.ex, typeId, levelId);
+    }
+  }
+  for (const types of Object.values(AREA_WORKOUTS)) {
+    for (const [typeId, levels] of Object.entries(types)) {
+      for (const [levelId, w] of Object.entries(levels)) for (const item of w.main) noteUse(item.ex, typeId, levelId);
     }
   }
 
@@ -49,21 +59,25 @@ const TrainScreens = (() => {
   function photoFrame(id, { compact = false } = {}) {
     const p = EXERCISE_PHOTOS[id];
     if (!p) return '';
-    const frames = p.frames || [0, 1];
-    const name = EXERCISES[id]?.name || '';
-    const imgs = frames.map((f, k) => `
-      <img src="${photoSrc(p, f)}" alt="${esc(name)}, ${f ? 'finish' : 'start'} position" width="850" height="567"
+    return photoFigure((p.frames || [0, 1]).map(f => photoSrc(p, f)), EXERCISES[id]?.name || '', p.note, compact);
+  }
+
+  // srcs: the start photo, then the finish photo if there is one.
+  function photoFigure(srcs, name, note = '', compact = false) {
+    if (!srcs.length) return '';
+    const imgs = srcs.map((src, k) => `
+      <img src="${src}" alt="${esc(name)}, ${k ? 'finish' : 'start'} position" width="850" height="567"
         loading="lazy" decoding="async"${k === 0 ? ' class="on"' : ''}>`).join('');
-    const toggle = frames.length > 1
+    const toggle = srcs.length > 1
       ? `<div class="photo-toggle" role="group" aria-label="Show position">
            <button data-show="0" aria-pressed="true">Start</button>
            <button data-show="1" aria-pressed="false">Finish</button>
          </div>`
       : '';
     return `
-      <figure class="ex-photo${compact ? ' compact' : ''}"${frames.length > 1 ? ' data-cycle' : ''}>
+      <figure class="ex-photo${compact ? ' compact' : ''}"${srcs.length > 1 ? ' data-cycle' : ''}>
         <div class="ex-photo-frame">${imgs}</div>
-        ${toggle || p.note ? `<figcaption>${toggle}${p.note ? `<span class="muted small">${esc(p.note)}</span>` : ''}</figcaption>` : ''}
+        ${toggle || note ? `<figcaption>${toggle}${note ? `<span class="muted small">${esc(note)}</span>` : ''}</figcaption>` : ''}
       </figure>`;
   }
 
@@ -95,11 +109,13 @@ const TrainScreens = (() => {
   // Small square picture for lists, or a plain icon when there's no photo.
   function thumb(id, number) {
     const p = EXERCISE_PHOTOS[id];
+    return thumbFrom(p && photoSrc(p, (p.frames || [0, 1]).at(-1)), number);
+  }
+
+  function thumbFrom(src, number) {
     const badge = number ? `<span class="thumb-num">${number}</span>` : '';
-    const inner = p
-      ? `<img src="${photoSrc(p, (p.frames || [0, 1]).at(-1))}" alt="" width="56" height="56" loading="lazy" decoding="async">`
-      : icon('train');
-    return `<span class="thumb${p ? '' : ' empty'}">${inner}${badge}</span>`;
+    const inner = src ? `<img src="${src}" alt="" width="56" height="56" loading="lazy" decoding="async">` : icon('train');
+    return `<span class="thumb${src ? '' : ' empty'}">${inner}${badge}</span>`;
   }
 
   // ---------- Train home ----------
@@ -403,6 +419,7 @@ const TrainScreens = (() => {
         <section class="card facts">
           <div><span class="label">Works</span><span>${esc(ex.muscles)}</span></div>
           <div><span class="label">Equipment</span><span>${esc(equipment)}</span></div>
+          <div><span class="label">Level</span><span>${esc(ExerciseDB.levelName(levelFor(id)))} and up</span></div>
         </section>
 
         ${item ? `
@@ -447,9 +464,40 @@ const TrainScreens = (() => {
     { id: 'all', label: 'All' },
     { id: 'favourites', label: 'Favourites' },
     ...TRAINING_TYPES.map(t => ({ id: t.id, label: t.name.replace(' workouts', '').replace(' weights', '') })),
+    { id: 'stretching', label: 'Stretching' },
   ];
-  let libraryFilter = 'all';
-  let libraryQuery = '';
+  // Kept while the app is open, so going back to the library keeps your search.
+  const lib = { type: 'all', q: '', muscle: '', gear: '', level: '', shown: 40 };
+  const PAGE = 40;
+
+  function filterSelect(name, label, options) {
+    return `
+      <select name="${name}" aria-label="${label}" class="${lib[name] ? 'set' : ''}">
+        <option value="">${esc(label)}</option>
+        ${options.map(o => `<option value="${o.id}"${lib[name] === o.id ? ' selected' : ''}>${esc(o.name)}</option>`).join('')}
+      </select>`;
+  }
+
+  const coachedRow = e => `
+    <a class="row-link" href="#/ex/${e.id}">
+      ${thumb(e.id)}
+      <span class="row-main">
+        <strong>${esc(e.name)}</strong>
+        <span class="muted small block">${esc(EXERCISES[e.id].muscles)}</span>
+      </span>
+      ${Store.isFavourite('exercises', e.id) ? icon('heart', 'fav-mark') : ''}
+      ${icon('chevron', 'chev')}
+    </a>`;
+
+  const extraRow = e => `
+    <a class="row-link" href="#/x/${encodeURIComponent(e.id)}">
+      ${thumbFrom(ExerciseDB.photos(e).at(-1))}
+      <span class="row-main">
+        <strong>${esc(e.name)}</strong>
+        <span class="muted small block">${esc(ExerciseDB.muscleNames(e.primary))} · ${esc(ExerciseDB.gearName(e.gear))} · ${esc(ExerciseDB.levelName(e.level))}</span>
+      </span>
+      ${icon('chevron', 'chev')}
+    </a>`;
 
   function library() {
     return {
@@ -457,47 +505,115 @@ const TrainScreens = (() => {
       tab: 'train',
       back: { href: '#/train', label: 'Train' },
       html: `
-        <input type="search" class="search" placeholder="Search by name or muscle" value="${esc(libraryQuery)}" aria-label="Search exercises">
-        <div class="filters" role="group" aria-label="Filter">
-          ${FILTERS.map(f => `<button class="filter" data-filter="${f.id}" aria-pressed="${f.id === libraryFilter}">${esc(f.label)}</button>`).join('')}
+        <input type="search" class="search" placeholder="Search by name or muscle" value="${esc(lib.q)}" aria-label="Search exercises">
+        <div class="filters" role="group" aria-label="Workout type">
+          ${FILTERS.map(f => `<button class="filter" data-filter="${f.id}" aria-pressed="${f.id === lib.type}">${esc(f.label)}</button>`).join('')}
+        </div>
+        <div class="filter-selects">
+          ${filterSelect('muscle', 'Muscle', ExerciseDB.MUSCLE_GROUPS)}
+          ${filterSelect('gear', 'Equipment', ExerciseDB.GEAR)}
+          ${filterSelect('level', 'Level', LEVELS.map(l => ({ id: l.id, name: l.name })))}
         </div>
         <div class="results"></div>`,
       mount(page) {
         const results = page.querySelector('.results');
         const draw = () => {
-          const q = libraryQuery.trim().toLowerCase();
-          const list = Object.entries(EXERCISES)
-            .filter(([id, ex]) =>
-              (libraryFilter === 'all' ||
-                (libraryFilter === 'favourites' ? Store.isFavourite('exercises', id) : typesByExercise[id]?.has(libraryFilter))) &&
-              (!q || `${ex.name} ${ex.muscles}`.toLowerCase().includes(q)))
-            .sort(([, a], [, b]) => a.name.localeCompare(b.name));
-          results.innerHTML = list.length
-            ? `<p class="muted small pad-x">${list.length} exercise${list.length === 1 ? '' : 's'}</p>
-               <div class="list">${list.map(([id, ex]) => `
-                 <a class="row-link" href="#/ex/${id}">
-                   ${thumb(id)}
-                   <span class="row-main">
-                     <strong>${esc(ex.name)}</strong>
-                     <span class="muted small block">${esc(ex.muscles)}</span>
-                   </span>
-                   ${Store.isFavourite('exercises', id) ? icon('heart', 'fav-mark') : ''}
-                   ${icon('chevron', 'chev')}
-                 </a>`).join('')}</div>`
-            : `<section class="card empty"><p class="muted">${libraryFilter === 'favourites' && !q
-                ? 'No favourites yet. Tap “Save to favourites” on any exercise.'
-                : 'No exercises match.'}</p></section>`;
+          const query = { ...lib, q: lib.q.trim().toLowerCase() };
+          const mine = ExerciseDB.coached().filter(e => ExerciseDB.matches(e, query)).sort((x, y) => x.name.localeCompare(y.name));
+          const more = lib.type === 'favourites' ? [] : ExerciseDB.extra().filter(e => ExerciseDB.matches(e, query));
+          const pending = !ExerciseDB.loaded() && lib.type !== 'favourites';
+          const shown = more.slice(0, lib.shown);
+          if (!mine.length && !more.length && !pending) {
+            results.innerHTML = `<section class="card empty"><p class="muted">${lib.type === 'favourites' && !query.q
+              ? 'No favourites yet. Tap “Save to favourites” on any exercise.'
+              : 'No exercises match. Try clearing a filter.'}</p></section>`;
+            return;
+          }
+          results.innerHTML = `
+            ${mine.length ? `
+              <p class="muted small pad-x"><strong>Coached</strong> · ${mine.length} with safety tips and easier/harder versions</p>
+              <div class="list">${mine.map(coachedRow).join('')}</div>` : ''}
+            ${more.length ? `
+              <p class="muted small pad-x list-head"><strong>More exercises</strong> · ${more.length}</p>
+              <div class="list">${shown.map(extraRow).join('')}</div>
+              ${more.length > shown.length ? `<button class="btn quiet" data-action="more">Show more (${more.length - shown.length} left)</button>` : ''}` : ''}
+            ${pending ? '<p class="muted small center" data-status>Loading more exercises…</p>' : ''}`;
         };
-        page.querySelector('.search').addEventListener('input', e => { libraryQuery = e.target.value; draw(); });
+        const changed = () => { lib.shown = PAGE; draw(); };
+        page.querySelector('.search').addEventListener('input', e => { lib.q = e.target.value; changed(); });
         page.querySelector('.filters').addEventListener('click', e => {
           const b = e.target.closest('[data-filter]');
           if (!b) return;
-          libraryFilter = b.dataset.filter;
+          lib.type = b.dataset.filter;
           page.querySelectorAll('.filter').forEach(f => f.setAttribute('aria-pressed', f === b));
+          changed();
+        });
+        page.querySelector('.filter-selects').addEventListener('change', e => {
+          lib[e.target.name] = e.target.value;
+          e.target.classList.toggle('set', !!e.target.value);
+          changed();
+        });
+        results.addEventListener('click', e => {
+          if (!e.target.closest('[data-action="more"]')) return;
+          lib.shown += PAGE;
           draw();
         });
         draw();
+        if (!ExerciseDB.loaded()) {
+          ExerciseDB.load()
+            .then(() => { if (page.isConnected) draw(); })
+            .catch(() => {
+              const status = page.querySelector('[data-status]');
+              if (status) status.textContent = "Couldn't load the full library. Check your signal and try again.";
+            });
+        }
       },
+    };
+  }
+
+  // An exercise from free-exercise-db: photos, muscles and steps, plus general safety tips.
+  function extraExercise(id) {
+    const e = ExerciseDB.get(id);
+    const back = { href: '#/library', label: 'Exercises' };
+    if (!e) {
+      return {
+        title: 'Exercise',
+        tab: 'train',
+        back,
+        html: '<section class="card empty"><p class="muted" data-status>Loading…</p></section>',
+        mount(page) {
+          const status = page.querySelector('[data-status]');
+          if (ExerciseDB.loaded()) { status.textContent = 'Exercise not found.'; return; }
+          ExerciseDB.load()
+            .then(() => { if (page.isConnected) App.refresh(); })
+            .catch(() => { status.textContent = "Couldn't load this exercise. Check your signal and try again."; });
+        },
+      };
+    }
+    return {
+      title: e.name,
+      tab: 'train',
+      back,
+      html: `
+        ${photoFigure(ExerciseDB.photos(e), e.name)}
+
+        <section class="card facts">
+          <div><span class="label">Works</span><span>${esc(ExerciseDB.muscleNames(e.primary))}</span></div>
+          ${e.secondary.length ? `<div><span class="label">Also works</span><span>${esc(ExerciseDB.muscleNames(e.secondary))}</span></div>` : ''}
+          <div><span class="label">Equipment</span><span>${esc(ExerciseDB.gearName(e.gear))}</span></div>
+          <div><span class="label">Level</span><span>${esc(ExerciseDB.levelName(e.level))}</span></div>
+          <div><span class="label">Type</span><span>${esc(ExerciseDB.CATEGORY_NAMES[e.category] || e.category)}</span></div>
+        </section>
+
+        ${sectionTitle('How to do it')}
+        <section class="card"><ol class="howto">${e.steps.map(s => `<li>${esc(s)}</li>`).join('')}</ol></section>
+
+        ${sectionTitle('Train safely')}
+        <section class="card">
+          <ul class="tips small">${SAFETY_TIPS.slice(0, 3).map(t => `<li>${icon('shield', 'tip-icon')}<span>${esc(t)}</span></li>`).join('')}</ul>
+        </section>
+        <p class="muted small pad-x credit">From free-exercise-db, public domain. Start light and learn the movement before adding effort.</p>`,
+      mount: startPhotos,
     };
   }
 
@@ -513,6 +629,7 @@ const TrainScreens = (() => {
   }
 
   const typesFor = id => typesByExercise[id] || new Set();
+  const levelFor = id => levelByExercise[id] || 'beginner';
 
-  return { train, area, exercise, library, nextWorkout, typesFor, doseLine, photoFrame, startPhotos, thumb };
+  return { train, area, exercise, extraExercise, library, nextWorkout, typesFor, levelFor, doseLine, photoFrame, startPhotos, thumb };
 })();

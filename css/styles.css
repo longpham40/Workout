@@ -899,3 +899,9 @@ body[data-route="chat"] .page { min-height: calc(100svh - var(--tabbar-h) - env(
 /* Small type icon at the start of a list row */
 .row-icon { width: 40px; height: 40px; border-radius: 12px; flex: none; }
 .row-icon .icon { width: 22px; height: 22px; }
+
+/* ---------- Library filters ---------- */
+.filter-selects { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 0.9fr); gap: 8px; }
+.filter-selects select { min-height: 40px; padding: 6px 26px 6px 11px; text-overflow: ellipsis; border-radius: 999px; background-position: right 10px center; font-weight: 600; font-size: 16px; }
+.filter-selects select.set { border-color: var(--text); background-color: var(--surface); }
+.list-head { margin-top: 8px; }

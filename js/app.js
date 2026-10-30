@@ -10,6 +10,7 @@ const App = (() => {
     area: TrainScreens.area,
     ex: TrainScreens.exercise,
     library: TrainScreens.library,
+    x: TrainScreens.extraExercise,
     session: Session.session,
     history: Session.history,
     eat: EatScreens.eat,
