@@ -909,3 +909,8 @@ body[data-route="chat"] .page { min-height: calc(100svh - var(--tabbar-h) - env(
 /* ---------- Program weeks ---------- */
 .week-card { display: grid; gap: 6px; justify-items: start; }
 .weeks .filter { font-variant-numeric: tabular-nums; }
+
+/* ---------- Swap and skip ---------- */
+.session-tools { display: flex; gap: 8px; }
+.session-tools .btn { flex: 1; gap: 6px; }
+.ex-dot.skipped::after { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }

@@ -280,6 +280,7 @@ const Session = (() => {
     const a = Store.state.active;
     if (!a) return noSession();
     if (sub === 'add') return addExercise();
+    if (sub === 'swap') return swapExercise();
     if (!a.items.length) return emptySession(a);
 
     const index = Math.min(a.current, a.items.length - 1);
@@ -303,7 +304,7 @@ const Session = (() => {
         <div class="session-top">
           <span class="elapsed">${icon('clock', 'inline')} <span data-elapsed>${elapsed(a)}</span></span>
           <div class="ex-dots">
-            ${a.items.map((it, j) => `<button class="ex-dot${j === index ? ' current' : ''}${isComplete(it) ? ' complete' : ''}" data-goto="${j}" aria-label="Exercise ${j + 1}: ${esc(it.name)}"></button>`).join('')}
+            ${a.items.map((it, j) => `<button class="ex-dot${j === index ? ' current' : ''}${isComplete(it) ? ' complete' : ''}${it.skipped ? ' skipped' : ''}" data-goto="${j}" aria-label="Exercise ${j + 1}: ${esc(it.name)}${it.skipped ? ', skipped' : ''}"></button>`).join('')}
           </div>
         </div>
 
@@ -311,6 +312,8 @@ const Session = (() => {
           ${item.ex ? TrainScreens.photoFrame(item.ex, { compact: true }) : ''}
           <div>
             <h2 class="ex-title">${esc(item.name)}</h2>
+            ${item.skipped ? '<p class="small muted">Skipped. Tick a set to do it after all.</p>' : ''}
+            ${item.swappedFrom ? `<p class="small muted">Swapped in for ${esc(item.swappedFrom)}</p>` : ''}
             ${item.target ? `<p class="muted">${esc(TrainScreens.doseLine(item.target))}</p>` : ''}
             ${last ? `<p class="small last">Last time: ${esc(summary(last.item, last.session.unit))}</p>` : ''}
           </div>
@@ -337,6 +340,11 @@ const Session = (() => {
           ${isLast
             ? '<button class="btn primary" data-action="finish">Finish workout</button>'
             : `<button class="btn primary" data-action="next">Next exercise ${icon('chevron', 'inline')}</button>`}
+        </div>
+
+        <div class="session-tools">
+          ${item.ex ? '<button class="btn" data-action="swap">' + icon('swap', 'inline') + ' Swap</button>' : ''}
+          ${isLast ? '' : '<button class="btn" data-action="skip">Skip</button>'}
         </div>
 
         <div class="session-more">
@@ -413,7 +421,10 @@ const Session = (() => {
           const s = item.sets[j];
           Store.update(() => {
             s.done = !s.done;
-            if (s.done) autofill(item, s);
+            if (s.done) {
+              autofill(item, s);
+              item.skipped = false;
+            }
           });
           if (s.done && !a.items.every(isComplete)) startRest(restFor(item));
           App.refresh();
@@ -449,6 +460,16 @@ const Session = (() => {
           break;
         case 'add-ex':
           location.hash = '#/session/add';
+          break;
+        case 'swap':
+          location.hash = '#/session/swap';
+          break;
+        case 'skip':
+          Store.update(() => {
+            item.skipped = !item.sets.some(s => s.done);
+            a.current += 1;
+          });
+          App.render();
           break;
         case 'remove-ex':
           if (!confirm(`Remove ${item.name} from this workout?`)) return;
@@ -562,6 +583,80 @@ const Session = (() => {
           }
         });
         draw();
+      },
+    };
+  }
+
+  // ---------- Swapping an exercise ----------
+
+  // Equipment each kind of workout can use. Calisthenics is bodyweight only.
+  const GEAR_FOR = {
+    calisthenics: new Set(['bodyweight']),
+    home: new Set(['bodyweight', 'bands', 'dumbbell', 'other']),
+  };
+
+  // Coached exercises that work the same main muscles, best match first.
+  function alternativesFor(item, typeId, exclude) {
+    const tag = EXERCISE_TAGS[item.ex];
+    if (!tag) return [];
+    const allowed = GEAR_FOR[typeId];
+    const count = item.sets.length;
+    return Object.keys(EXERCISES)
+      .filter(id => !exclude.has(id))
+      .map(id => {
+        const t = EXERCISE_TAGS[id];
+        const shared = t.primary.filter(m => tag.primary.includes(m));
+        const score = shared.length * 3 + t.secondary.filter(m => tag.primary.includes(m) || tag.secondary.includes(m)).length
+          + (t.primary.length === tag.primary.length ? 1 : 0)
+          + (TrainScreens.typesFor(id).has(typeId) ? 2 : 0); // already used in this kind of workout
+        return { id, t, shared, score };
+      })
+      .filter(c => c.shared.length
+        && (!allowed || allowed.has(c.t.gear))
+        && (c.t.category || 'strength') === (tag.category || 'strength')
+        && kindFor(c.id, typeId, count) === item.kind)
+      .sort((x, y) => y.score - x.score || EXERCISES[x.id].name.localeCompare(EXERCISES[y.id].name))
+      .slice(0, 8);
+  }
+
+  function swapExercise() {
+    const a = Store.state.active;
+    const item = a.items[Math.min(a.current, a.items.length - 1)];
+    const typeId = a.source?.type || null;
+    const options = alternativesFor(item, typeId, new Set(a.items.map(it => it.ex)));
+    return {
+      title: 'Swap exercise',
+      subtitle: item.name,
+      tab: 'none',
+      back: { href: '#/session', label: 'Workout' },
+      html: `
+        <p class="muted pad-x">Exercises that work the same main muscles${GEAR_FOR[typeId] ? `, with the equipment for ${esc(TRAINING_TYPES.find(t => t.id === typeId).name.toLowerCase())}` : ''}. Your sets, reps and rest stay the same.</p>
+        ${options.length ? `
+          <div class="list">${options.map(o => `
+            <button class="row-link as-button" data-swap="${o.id}">
+              ${TrainScreens.thumb(o.id)}
+              <span class="row-main">
+                <strong>${esc(EXERCISES[o.id].name)}</strong>
+                <span class="muted small block">Same: ${esc(ExerciseDB.muscleNames(o.shared))} · ${esc(ExerciseDB.gearName(o.t.gear))}</span>
+              </span>
+              ${icon('swap', 'chev')}
+            </button>`).join('')}</div>`
+          : '<section class="card empty"><p class="muted">No close matches for this one. You can add any exercise instead.</p><a class="btn" href="#/session/add">Add an exercise</a></section>'}`,
+      mount(page) {
+        page.addEventListener('click', e => {
+          const id = e.target.closest('[data-swap]')?.dataset.swap;
+          if (!id) return;
+          if (item.sets.some(s => s.done) && !confirm(`Swap out ${item.name}? The sets you've ticked for it won't be saved.`)) return;
+          Store.update(s => {
+            const at = s.active.items.indexOf(item);
+            const target = item.target ? { ...item.target, ex: id, note: undefined } : null;
+            const next = makeItem({ ex: id, name: EXERCISES[id].name, typeId, target }, s.active.unit);
+            next.swappedFrom = item.swappedFrom || item.name;
+            s.active.items[at] = next;
+          });
+          UI.toast(`Swapped in ${EXERCISES[id].name}`);
+          location.hash = '#/session';
+        });
       },
     };
   }
