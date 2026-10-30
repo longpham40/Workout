@@ -1,5 +1,4 @@
 // Workout content. Edit the text here and refresh the app to see it.
-// Step 2 adds the full programs and exercise library to this file.
 
 const TRAINING_TYPES = [
   {

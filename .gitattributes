@@ -1,0 +1,4 @@
+# Keep line endings as LF in the repo, so Git stops warning about them on Windows.
+* text=auto eol=lf
+*.png binary
+*.jpg binary

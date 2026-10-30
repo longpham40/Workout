@@ -60,6 +60,8 @@ After an edit, refresh the page. Once the app is hosted, upload the changed file
 
 If you add a **new file**, also add it to the `APP_FILES` list in `sw.js` so it works offline.
 
+After editing anything in `data/`, run `node tools/check.js`. It reports any exercise, photo or recipe that something points at but doesn't exist.
+
 ## Your data
 
 Everything you save stays on the phone, in the browser's storage for this app. That includes your profile, workouts and favourites. Use **Settings → Export backup** now and then, and before changing phones.

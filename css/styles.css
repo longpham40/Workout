@@ -237,8 +237,7 @@ main {
 .dose { display: grid; grid-template-columns: 1fr 2fr 1.3fr; gap: 10px; }
 .dose.no-rest { grid-template-columns: 1fr 3fr; }
 
-.soon-card, .empty { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 24px 20px; }
-.soon-icon { width: 32px; height: 32px; color: var(--muted); }
+.empty { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 24px 20px; }
 
 .tips { list-style: none; padding: 0; display: grid; gap: 12px; }
 .tips li { display: flex; gap: 10px; }
